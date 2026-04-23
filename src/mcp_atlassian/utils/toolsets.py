@@ -160,6 +160,17 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         ),
         default=False,
     ),
+    "jira_analyst_dvcs": ToolsetDefinition(
+        name="jira_analyst_dvcs",
+        description=(
+            "DVCS + Git Integration inspection (DC): native "
+            "/rest/bitbucket/1.0 organizations/repos/sync-audit "
+            "(GitHub/GitLab/Bitbucket), BigBrassBand Git Integration "
+            "per-issue commits/branches, dev-status summary + detail — "
+            "the Git dev-panel story on the backend"
+        ),
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---

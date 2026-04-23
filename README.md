@@ -99,7 +99,7 @@ Documentation is also available in [llms.txt format](https://llmstxt.org/), whic
 
 ## Jira DC Analyst toolset (this fork)
 
-This fork adds **91 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see.
+This fork adds **101 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see.
 
 **Full tool-by-tool list with descriptions → [TOOLS.md](TOOLS.md).**
 
@@ -115,6 +115,7 @@ This fork adds **91 read-only deep-inspection tools** for Jira Data Center admin
 | `jira_analyst_logs` | 2 | `/rest/auditing/1.0/events` + `atlassian-jira.log` tail |
 | `jira_analyst_integrations` | 6 | Integration surface: UPM plugins (list/get/modules), webhooks (v1.0 + v10.x fallback), application links, dark features |
 | `jira_analyst_issue_inspect` | 4 | Deep issue inspection: inline attachment content (image vision + text), thumbnails, votes, remote links |
+| `jira_analyst_dvcs` | 10 | DVCS + Git integration story: native `/rest/bitbucket/1.0` orgs/repos/sync audit, BigBrassBand Git Integration per-issue commits/branches/reverse-lookup, dev-status `/summary` + `/detail` that drive the issue Git panel |
 
 ### Enabling it
 

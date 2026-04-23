@@ -1767,3 +1767,347 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
                 mimeType="image/png",
             ),
         ]
+
+    # =====================================================================
+    # DVCS + Git Integration inspection
+    #
+    # Three REST surfaces feed the "Git info panel" on a Jira issue:
+    #
+    #   1. Native Jira DVCS — ``/rest/bitbucket/1.0/`` (legacy name despite
+    #      supporting GitHub/GitLab too). Owns the "DVCS accounts" admin
+    #      page. Paginated singular noun (``organization``, not the plural
+    #      form sometimes seen in community posts).
+    #   2. BigBrassBand "Git Integration for Jira" — ``/rest/gitplugin/1.0/``
+    #      (Marketplace app id 4984). NOT ``jgitplugin`` — that is a
+    #      different, older, unrelated plugin.
+    #   3. ``/rest/dev-status/1.0/`` — the API that actually renders the
+    #      dev panel on the issue view, aggregating data from whichever
+    #      provider plugin feeds it. Its ``applicationType`` is
+    #      case-sensitive — ``stash`` for Bitbucket Server, ``GitHub``
+    #      for github.com, ``githube`` for Enterprise, ``gitlab`` for
+    #      GitLab via DVCS. The ``/summary`` endpoint returns the exact
+    #      provider keys ("byInstanceType") that should then be passed
+    #      to ``/detail``, so we drive the loop dynamically instead of
+    #      hard-coding.
+    # =====================================================================
+
+    # ---- native DVCS ---------------------------------------------------
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "List DVCS Organizations", "readOnlyHint": True},
+    )
+    async def list_dvcs_organizations(
+        ctx: Context,
+        page: Annotated[int, Field(description="1-based page number.")] = 1,
+        page_size: Annotated[
+            int, Field(description="Page size (1..100).")
+        ] = 50,
+    ) -> str:
+        """``GET /rest/bitbucket/1.0/organization/page`` — connected
+        GitHub/GitLab/Bitbucket orgs, their type and OAuth key.
+        Paginated — pagination is not optional on DC."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    "/rest/bitbucket/1.0/organization/page",
+                    pagenum=max(1, int(page)),
+                    pagesize=max(1, min(int(page_size), 100)),
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_dvcs_organizations failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "Get DVCS Organization", "readOnlyHint": True},
+    )
+    async def get_dvcs_organization(
+        ctx: Context,
+        organization_id: Annotated[str, Field(description="Organization id.")],
+    ) -> str:
+        """``GET /rest/bitbucket/1.0/organization/{id}`` — org detail:
+        name, baseUrl, type, autolinkNewRepos, smartcommitsOnNewRepos,
+        defaultGroupsSlugs, principal."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/bitbucket/1.0/organization/{organization_id}"
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_dvcs_organization failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "List DVCS Repositories", "readOnlyHint": True},
+    )
+    async def list_dvcs_repositories(
+        ctx: Context,
+        organization_id: Annotated[str, Field(description="Organization id.")],
+    ) -> str:
+        """``GET /rest/bitbucket/1.0/organization/{id}/repository`` —
+        repos synced for an org. Per-repo: slug, linked, smartcommitsEnabled,
+        lastCommitDate, activityLastUpdatedTimestamp. Note singular
+        ``/repository`` — documented path."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/bitbucket/1.0/organization/{organization_id}/repository"
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_dvcs_repositories failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "Get DVCS Repository", "readOnlyHint": True},
+    )
+    async def get_dvcs_repository(
+        ctx: Context,
+        repository_id: Annotated[str, Field(description="Repository id.")],
+    ) -> str:
+        """``GET /rest/bitbucket/1.0/repository/{id}`` — single repo detail."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(f"/rest/bitbucket/1.0/repository/{repository_id}")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_dvcs_repository failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "DVCS Sync Audit", "readOnlyHint": True},
+    )
+    async def get_dvcs_sync_audit(
+        ctx: Context,
+        repository_id: Annotated[
+            str,
+            Field(
+                description=(
+                    "Repository id to audit. Omit to read the instance-wide "
+                    "audit log via ``/audit/repository/all``."
+                )
+            ),
+        ] = "",
+    ) -> str:
+        """``GET /rest/bitbucket/1.0/audit/repository/{id|all}`` — this
+        is the canonical "why isn't the Git panel updating" answer:
+        firstRequestDate / lastActivityDate / totalChangesetCount /
+        flightTimeMs and, on failure, exception + message + status
+        (``OK`` / ``SYNC_ERROR`` / ``SYNC_WARNING``).
+
+        A common mistake is to hit ``/repository/{id}/sync`` for status —
+        that path is the resync trigger, not a status read.
+        """
+        client = await _get_client(ctx)
+        path = (
+            f"/rest/bitbucket/1.0/audit/repository/{repository_id}"
+            if repository_id
+            else "/rest/bitbucket/1.0/audit/repository/all"
+        )
+        try:
+            return _fmt(client.rest_get(path))
+        except AnalystError as exc:
+            return _err(
+                f"get_dvcs_sync_audit failed: {exc}", status=exc.status
+            )
+
+    # ---- BigBrassBand Git Integration for Jira (GIJ) ----------------
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "GIJ: Issue Commits", "readOnlyHint": True},
+    )
+    async def list_gij_issue_commits(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Issue key, e.g. 'HR-123'.")],
+        show_files: Annotated[
+            bool,
+            Field(
+                description="If true, each commit also lists changed files with change type."
+            ),
+        ] = False,
+    ) -> str:
+        """``GET /rest/gitplugin/1.0/issues/{key}/commits`` — commits
+        linked to an issue via the BigBrassBand Git Integration plugin.
+        Respects issue-view permission (any user who can see the issue
+        can list its commits)."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/gitplugin/1.0/issues/{issue_key}/commits",
+                    showfiles="true" if show_files else "false",
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_gij_issue_commits failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "GIJ: Issue Branches", "readOnlyHint": True},
+    )
+    async def list_gij_issue_branches(
+        ctx: Context,
+        issue_key: Annotated[
+            str,
+            Field(
+                description=(
+                    "Issue key. Omit to list ALL indexed branches across the "
+                    "instance — large response, prefer a specific issue."
+                )
+            ),
+        ] = "",
+    ) -> str:
+        """``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>`` —
+        branches the plugin has linked to an issue."""
+        client = await _get_client(ctx)
+        try:
+            params: dict[str, Any] = {}
+            if issue_key:
+                params["key"] = issue_key
+            return _fmt(
+                client.rest_get("/rest/gitplugin/1.0/issues/branches", **params)
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_gij_issue_branches failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "GIJ: Commit Reverse Lookup", "readOnlyHint": True},
+    )
+    async def get_gij_commit_issues(
+        ctx: Context,
+        commit_sha: Annotated[
+            str,
+            Field(description="Full or shortened commit SHA as indexed by GIJ."),
+        ],
+    ) -> str:
+        """``GET /rest/gitplugin/1.0/commit/{sha}/issues`` — reverse
+        lookup: which Jira issues is this commit linked to. Useful
+        when a user asks "why is this commit showing on ticket X"."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(f"/rest/gitplugin/1.0/commit/{commit_sha}/issues")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_gij_commit_issues failed: {exc}", status=exc.status
+            )
+
+    # ---- dev-status (raw panel data) --------------------------------
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "Dev Panel Summary", "readOnlyHint": True},
+    )
+    async def get_issue_dev_summary(
+        ctx: Context,
+        issue_id: Annotated[
+            str,
+            Field(
+                description=(
+                    "Numeric issue id (not key). Use the upstream "
+                    "``jira_get_issue`` tool to resolve a key to its id first."
+                )
+            ),
+        ],
+    ) -> str:
+        """``GET /rest/dev-status/1.0/issue/summary?issueId=<id>`` — counts
+        per category (pullrequest / branch / repository) AND — critically —
+        the exact ``byInstanceType`` map whose keys are the valid
+        ``applicationType`` strings for ``get_issue_dev_detail``.
+
+        Use this FIRST when you're not sure which provider (stash/GitHub/
+        githube/gitlab/bitbucket) is wired up; read the keys and pass them
+        verbatim to the detail call."""
+        if not issue_id.isdigit():
+            return _err(
+                "issue_id must be a numeric issue id. Resolve a key via "
+                "/rest/api/2/issue/{key}?fields=id first."
+            )
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    "/rest/dev-status/1.0/issue/summary", issueId=issue_id
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_issue_dev_summary failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_dvcs"},
+        annotations={"title": "Dev Panel Detail", "readOnlyHint": True},
+    )
+    async def get_issue_dev_detail(
+        ctx: Context,
+        issue_id: Annotated[str, Field(description="Numeric issue id.")],
+        application_type: Annotated[
+            str,
+            Field(
+                description=(
+                    "Case-sensitive provider key from ``get_issue_dev_summary`` "
+                    "(``stash`` for Bitbucket Server/DC, ``GitHub``, ``githube`` "
+                    "for GitHub Enterprise, ``gitlab`` via DVCS, ``bitbucket`` "
+                    "for Bitbucket Cloud)."
+                )
+            ),
+        ],
+        data_type: Annotated[
+            str,
+            Field(
+                description=(
+                    "One of ``repository`` (commits nested under repos), "
+                    "``branch`` (branches + linked PRs), or ``pullrequest`` "
+                    "(PRs at top level). Singular — not ``pullrequests``."
+                )
+            ),
+        ],
+    ) -> str:
+        """``GET /rest/dev-status/1.0/issue/detail`` — raw dev-panel payload
+        the UI renders on the issue view. Structure:
+        ``{detail:[{_instance, repositories[{commits[]}], branches[],
+        pullRequests[]}]}``."""
+        if not issue_id.isdigit():
+            return _err("issue_id must be a numeric issue id.")
+        if data_type not in ("repository", "branch", "pullrequest"):
+            return _err(
+                "data_type must be 'repository', 'branch', or 'pullrequest' (singular)"
+            )
+        if not application_type:
+            return _err("application_type is required (case-sensitive provider key)")
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    "/rest/dev-status/1.0/issue/detail",
+                    issueId=issue_id,
+                    applicationType=application_type,
+                    dataType=data_type,
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_issue_dev_detail failed: {exc}", status=exc.status
+            )

@@ -1,13 +1,13 @@
 # Tools reference — mcp-atlassian-analyst
 
-91 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
+101 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
 
-Auto-generated from tool registrations on the `main`/latest feature branch.
-Source: [`src/mcp_atlassian/servers/`](src/mcp_atlassian/servers/) in [https://github.com/aforbco/mcp-atlassian-analyst](https://github.com/aforbco/mcp-atlassian-analyst).
+Auto-generated from tool registrations on `feat/jira-analyst-toolset-v3`.
+Source: [`src/mcp_atlassian/servers/jira_analyst.py`](src/mcp_atlassian/servers/jira_analyst.py).
 
-**140 tools total across 24 toolsets.**
+**150 tools total across 25 toolsets.**
 
-Tool names shown below include the `jira_` / `confluence_` prefix that FastMCP mounts automatically.
+Tool names below include the `jira_` / `confluence_` prefix that FastMCP mounts automatically.
 
 Kind legend: **read** = read-only · **write** = state-changing (disabled under `READ_ONLY_MODE`) · **write (destructive)** = carries the MCP `destructiveHint` annotation so clients prompt before executing.
 
@@ -142,7 +142,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_plugins` | read | Installed plugins via Universal Plugin Manager (SYS_ADMIN required). |
 | `jira_list_webhooks` | read | List instance webhooks. |
 
-### `jira_analyst_issue_inspect` — Deep issue inspection (attachments, votes, remote links) (4)
+### `jira_analyst_issue_inspect` — Deep issue inspection (4)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -150,6 +150,21 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_get_attachment_thumbnail` | read | Fetch the server-generated thumbnail for an image attachment. |
 | `jira_get_issue_remotelinks` | read | External links attached to an issue — ``/rest/api/2/issue/{key}/remotelink``. |
 | `jira_get_issue_votes` | read | Total votes and (where visible) voter list for an issue. |
+
+### `jira_analyst_dvcs` — DVCS + Git Integration + dev-status (10)
+
+| Tool | Kind | Description |
+|---|---|---|
+| `jira_get_dvcs_organization` | read | ``GET /rest/bitbucket/1.0/organization/{id}`` — org detail: |
+| `jira_get_dvcs_repository` | read | ``GET /rest/bitbucket/1.0/repository/{id}`` — single repo detail. |
+| `jira_get_dvcs_sync_audit` | read | ``GET /rest/bitbucket/1.0/audit/repository/{id\|all}`` — this |
+| `jira_get_gij_commit_issues` | read | ``GET /rest/gitplugin/1.0/commit/{sha}/issues`` — reverse |
+| `jira_get_issue_dev_detail` | read | ``GET /rest/dev-status/1.0/issue/detail`` — raw dev-panel payload |
+| `jira_get_issue_dev_summary` | read | ``GET /rest/dev-status/1.0/issue/summary?issueId=<id>`` — counts |
+| `jira_list_dvcs_organizations` | read | ``GET /rest/bitbucket/1.0/organization/page`` — connected |
+| `jira_list_dvcs_repositories` | read | ``GET /rest/bitbucket/1.0/organization/{id}/repository`` — |
+| `jira_list_gij_issue_branches` | read | ``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>`` — |
+| `jira_list_gij_issue_commits` | read | ``GET /rest/gitplugin/1.0/issues/{key}/commits`` — commits |
 
 ---
 
