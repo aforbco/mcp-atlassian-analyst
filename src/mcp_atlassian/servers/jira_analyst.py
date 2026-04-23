@@ -16,20 +16,68 @@ Ported from https://github.com/aforbco/jira-analyst-mcp — see the README for
 the Groovy source and installation steps.
 """
 
+import base64
 import json
 import logging
 from typing import Annotated, Any
 
 from fastmcp import Context
+from mcp.types import ImageContent, TextContent
 from pydantic import Field
 
 from mcp_atlassian.jira.analyst.client import AnalystClient, AnalystError
 from mcp_atlassian.servers.dependencies import get_jira_fetcher
+from mcp_atlassian.utils.media import is_image_attachment
 
 logger = logging.getLogger("mcp-atlassian.servers.jira_analyst")
 
 
 MAX_AQL_LENGTH = 2000
+
+# Attachment-inspection limits (ported from jira-analyst-mcp).
+# Image size cap for inline delivery as MCP ImageContent — Claude vision
+# naturally handles png/jpeg/gif/webp up to a few MB; going beyond that
+# is wasteful since the model downsamples server-side anyway.
+_MAX_IMAGE_BYTES = 5 * 1024 * 1024
+_MAX_TEXT_DOWNLOAD_BYTES = 1_000_000  # hard cap on a single text file download
+_MAX_TEXT_CHARS = 50_000  # after decode, truncate for the LLM
+_MAX_BINARY_BASE64_BYTES = 200_000  # only inline small binaries as base64
+_VISIBLE_IMAGE_MIMES = frozenset(
+    {"image/png", "image/jpeg", "image/gif", "image/webp"}
+)
+_TEXT_MIME_PREFIXES = (
+    "text/",
+    "application/json",
+    "application/xml",
+    "application/javascript",
+    "application/csv",
+    "application/x-yaml",
+    "application/sql",
+)
+_TEXT_EXTENSIONS = (
+    ".txt",
+    ".csv",
+    ".json",
+    ".xml",
+    ".yml",
+    ".yaml",
+    ".md",
+    ".log",
+    ".sql",
+    ".groovy",
+    ".py",
+    ".js",
+    ".ts",
+    ".java",
+    ".kt",
+    ".sh",
+)
+
+
+def _looks_like_text(mime: str, filename: str) -> bool:
+    if mime and mime.startswith(_TEXT_MIME_PREFIXES):
+        return True
+    return filename.lower().endswith(_TEXT_EXTENSIONS)
 
 
 def _fmt(data: Any) -> str:
@@ -1171,3 +1219,551 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             else f"/rest/cb-automation/latest/rule/{rule_id}"
         )
         return _fmt(client.rest_get(path))
+
+    # =====================================================================
+    # Integrations surface — plugins, webhooks, applinks, dark features
+    # =====================================================================
+
+    # UPM requires an explicit vendor-specific Accept header or returns HTML.
+    # https://developer.atlassian.com/platform/marketplace/registering-apps/
+    _UPM_ACCEPT_LIST = "application/vnd.atl.plugins.installed+json"
+    _UPM_ACCEPT_PLUGIN = "application/vnd.atl.plugins.plugin+json"
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_integrations"},
+        annotations={"title": "List Installed Plugins (UPM)", "readOnlyHint": True},
+    )
+    async def list_plugins(ctx: Context) -> str:
+        """Installed plugins via Universal Plugin Manager (SYS_ADMIN required)."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get("/rest/plugins/1.0/", accept=_UPM_ACCEPT_LIST)
+            )
+        except AnalystError as exc:
+            return _err(f"list_plugins failed: {exc}", status=exc.status)
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_integrations"},
+        annotations={"title": "Get Plugin (UPM)", "readOnlyHint": True},
+    )
+    async def get_plugin(
+        ctx: Context,
+        plugin_key: Annotated[
+            str,
+            Field(
+                description=(
+                    "Plugin key, e.g. 'com.atlassian.jira.plugins.jira-importers-plugin'."
+                )
+            ),
+        ],
+    ) -> str:
+        """Single plugin details — UPM ``/rest/plugins/1.0/{key}-key``."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/plugins/1.0/{plugin_key}-key",
+                    accept=_UPM_ACCEPT_PLUGIN,
+                )
+            )
+        except AnalystError as exc:
+            return _err(f"get_plugin failed: {exc}", status=exc.status)
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_integrations"},
+        annotations={"title": "Get Plugin Modules (UPM)", "readOnlyHint": True},
+    )
+    async def get_plugin_modules(
+        ctx: Context,
+        plugin_key: Annotated[str, Field(description="Plugin key.")],
+    ) -> str:
+        """Enabled/disabled modules for a plugin (completeKey, type, name)."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/plugins/1.0/{plugin_key}-key/modules",
+                    accept=_UPM_ACCEPT_PLUGIN,
+                )
+            )
+        except AnalystError as exc:
+            return _err(f"get_plugin_modules failed: {exc}", status=exc.status)
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_integrations"},
+        annotations={"title": "List Webhooks", "readOnlyHint": True},
+    )
+    async def list_webhooks(ctx: Context) -> str:
+        """List instance webhooks.
+
+        Jira ≤ 9.x exposes them at ``/rest/webhooks/1.0/webhook``; Jira ≥ 10.x
+        moved the endpoint to ``/rest/jira-webhook/1.0/webhooks``. We try the
+        modern path first and fall back to the legacy one, so the tool works
+        across supported DC versions. Jira Administrators permission required.
+        """
+        client = await _get_client(ctx)
+        paths = ("/rest/jira-webhook/1.0/webhooks", "/rest/webhooks/1.0/webhook")
+        last_err: AnalystError | None = None
+        for path in paths:
+            try:
+                return _fmt(client.rest_get(path))
+            except AnalystError as exc:
+                last_err = exc
+                if exc.status in (404, 405):
+                    continue
+                return _err(
+                    f"list_webhooks failed on {path}: {exc}", status=exc.status
+                )
+        return _err(
+            "list_webhooks: neither the v10+ nor the legacy webhook endpoint "
+            "responded on this instance",
+            status=last_err.status if last_err else None,
+        )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_integrations"},
+        annotations={"title": "List Application Links", "readOnlyHint": True},
+    )
+    async def list_application_links(ctx: Context) -> str:
+        """Application links to Confluence/Bitbucket/other (admin-only).
+
+        Uses ``/rest/applinks/3.0/applicationlink`` and forces
+        ``Accept: application/json`` — the applinks service prefers XML
+        by default and will return XML if the client doesn't request JSON.
+        """
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    "/rest/applinks/3.0/applicationlink",
+                    accept="application/json",
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_application_links failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_integrations"},
+        annotations={"title": "List Dark Features (best-effort)", "readOnlyHint": True},
+    )
+    async def list_dark_features(ctx: Context) -> str:
+        """Dark-features toggles via ``/rest/internal/1.0/darkFeatures``.
+
+        This is an **internal/private** Atlassian API — the closest thing
+        DC exposes for a feature-flags overview. It's read-only and stable
+        enough for audits, but Atlassian may change it without notice.
+        """
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/internal/1.0/darkFeatures"))
+        except AnalystError as exc:
+            return _err(
+                "list_dark_features failed — /rest/internal/1.0/darkFeatures "
+                "is a private API and may be unavailable on this instance",
+                status=exc.status,
+                detail=str(exc),
+            )
+
+    # =====================================================================
+    # Admin additions — my permissions, reindex
+    # =====================================================================
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_admin"},
+        annotations={"title": "My Permissions", "readOnlyHint": True},
+    )
+    async def my_permissions(
+        ctx: Context,
+        project_key: Annotated[
+            str,
+            Field(
+                description=(
+                    "Project key to scope the check. Use together with "
+                    "issue_key for per-issue permission decisions."
+                )
+            ),
+        ] = "",
+        issue_key: Annotated[
+            str,
+            Field(description="Issue key for per-issue permission scoping."),
+        ] = "",
+        permissions: Annotated[
+            str,
+            Field(
+                description=(
+                    "Optional comma-separated permission keys to filter, "
+                    "e.g. 'EDIT_ISSUES,DELETE_ISSUES'."
+                )
+            ),
+        ] = "",
+    ) -> str:
+        """``GET /rest/api/2/mypermissions`` — resolves the effective permissions
+        for the authenticated user on the given scope. DC returns the full list
+        if ``permissions`` is omitted; we pass it through for forward-compat
+        with Cloud where it's mandatory."""
+        params: dict[str, Any] = {}
+        if project_key:
+            params["projectKey"] = project_key
+        if issue_key:
+            params["issueKey"] = issue_key
+        if permissions:
+            params["permissions"] = permissions
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/api/2/mypermissions", **params))
+        except AnalystError as exc:
+            return _err(f"my_permissions failed: {exc}", status=exc.status)
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_admin"},
+        annotations={"title": "Reindex Status", "readOnlyHint": True},
+    )
+    async def get_reindex_status(ctx: Context) -> str:
+        """``GET /rest/api/2/reindex`` — current/last reindex progress.
+
+        Returns 404 until the instance has run at least one reindex; we
+        translate that into an explanatory JSON response instead of a raw
+        error so callers can tell "never reindexed" from "permission denied".
+        """
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/api/2/reindex"))
+        except AnalystError as exc:
+            if exc.status == 404:
+                return _fmt(
+                    {
+                        "status": "no_reindex_recorded",
+                        "note": (
+                            "/rest/api/2/reindex returned 404 — this instance "
+                            "has no stored reindex progress (likely never "
+                            "reindexed, or progress was cleared)."
+                        ),
+                    }
+                )
+            return _err(f"get_reindex_status failed: {exc}", status=exc.status)
+
+    # =====================================================================
+    # Issue deep-inspection — votes, remote links, attachment content
+    # =====================================================================
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_issue_inspect"},
+        annotations={"title": "Get Issue Votes", "readOnlyHint": True},
+    )
+    async def get_issue_votes(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Issue key, e.g. 'HR-123'.")],
+    ) -> str:
+        """Total votes and (where visible) voter list for an issue.
+
+        ``voters`` is populated only when the caller has the *View Voters
+        and Watchers* project permission — an empty array does not imply
+        no voters.
+        """
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get(f"/rest/api/2/issue/{issue_key}/votes"))
+        except AnalystError as exc:
+            return _err(f"get_issue_votes failed: {exc}", status=exc.status)
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_issue_inspect"},
+        annotations={"title": "Get Issue Remote Links", "readOnlyHint": True},
+    )
+    async def get_issue_remotelinks(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Issue key.")],
+        global_id: Annotated[
+            str,
+            Field(
+                description="Optional global-id filter (matches a single link)."
+            ),
+        ] = "",
+    ) -> str:
+        """External links attached to an issue — ``/rest/api/2/issue/{key}/remotelink``."""
+        client = await _get_client(ctx)
+        params: dict[str, Any] = {}
+        if global_id:
+            params["globalId"] = global_id
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/api/2/issue/{issue_key}/remotelink", **params
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_issue_remotelinks failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_issue_inspect"},
+        annotations={"title": "Get Attachment Content", "readOnlyHint": True},
+    )
+    async def get_attachment_content(
+        ctx: Context,
+        attachment_id: Annotated[
+            str, Field(description="Numeric attachment id (from list_attachments).")
+        ],
+    ) -> list[TextContent | ImageContent]:
+        """Download an attachment and return it inline for analysis.
+
+        Behaviour by MIME type:
+
+        * **Image** (png/jpeg/gif/webp) up to 5 MB → MCP ImageContent that
+          Claude can see natively (screenshots, diagrams, image logs).
+        * **Text** (text/*, json, xml, csv, yaml, sql, md, common source
+          extensions) → inlined UTF-8 text, truncated at 50 000 characters.
+        * **Other binary** up to 200 KB → base64 blob inside a TextContent
+          for programmatic use.
+        * **Too large** → metadata + download URL so the caller can stream
+          the file out-of-band.
+        """
+        client = await _get_client(ctx)
+        try:
+            meta = client.rest_get(f"/rest/api/2/attachment/{attachment_id}")
+        except AnalystError as exc:
+            return [
+                TextContent(
+                    type="text",
+                    text=_err(
+                        f"get_attachment_content metadata failed: {exc}",
+                        status=exc.status,
+                    ),
+                )
+            ]
+        filename: str = meta.get("filename", "") or ""
+        size: int = int(meta.get("size") or 0)
+        mime: str = (meta.get("mimeType") or "").lower()
+        content_url: str = meta.get("content") or ""
+        is_image, resolved_mime = is_image_attachment(mime, filename)
+        visible_mime = resolved_mime in _VISIBLE_IMAGE_MIMES
+
+        if is_image and size > _MAX_IMAGE_BYTES:
+            return [
+                TextContent(
+                    type="text",
+                    text=_fmt(
+                        {
+                            "id": attachment_id,
+                            "filename": filename,
+                            "size": size,
+                            "mimeType": resolved_mime,
+                            "warning": (
+                                f"Image too large ({size} > {_MAX_IMAGE_BYTES}). "
+                                "Use get_attachment_thumbnail or the URL below."
+                            ),
+                            "contentUrl": content_url,
+                        }
+                    ),
+                )
+            ]
+        if not is_image and size > _MAX_TEXT_DOWNLOAD_BYTES:
+            return [
+                TextContent(
+                    type="text",
+                    text=_fmt(
+                        {
+                            "id": attachment_id,
+                            "filename": filename,
+                            "size": size,
+                            "mimeType": resolved_mime,
+                            "warning": (
+                                f"File too large ({size} > "
+                                f"{_MAX_TEXT_DOWNLOAD_BYTES}). Use the URL."
+                            ),
+                            "contentUrl": content_url,
+                        }
+                    ),
+                )
+            ]
+
+        try:
+            data = client.fetch_bytes(
+                content_url,
+                max_bytes=_MAX_IMAGE_BYTES if is_image else _MAX_TEXT_DOWNLOAD_BYTES,
+            )
+        except AnalystError as exc:
+            return [
+                TextContent(
+                    type="text",
+                    text=_err(
+                        f"attachment download failed: {exc}",
+                        status=exc.status,
+                        id=attachment_id,
+                        filename=filename,
+                    ),
+                )
+            ]
+
+        if is_image and visible_mime:
+            return [
+                TextContent(
+                    type="text",
+                    text=_fmt(
+                        {
+                            "id": attachment_id,
+                            "filename": filename,
+                            "size": size,
+                            "mimeType": resolved_mime,
+                        }
+                    ),
+                ),
+                ImageContent(
+                    type="image",
+                    data=base64.b64encode(data).decode("ascii"),
+                    mimeType=resolved_mime,
+                ),
+            ]
+        if is_image:
+            return [
+                TextContent(
+                    type="text",
+                    text=_fmt(
+                        {
+                            "id": attachment_id,
+                            "filename": filename,
+                            "size": size,
+                            "mimeType": resolved_mime,
+                            "hint": (
+                                f"MIME {resolved_mime} is not natively rendered; "
+                                "returning base64."
+                            ),
+                            "contentBase64": base64.b64encode(data).decode("ascii"),
+                        }
+                    ),
+                )
+            ]
+
+        if _looks_like_text(resolved_mime, filename):
+            try:
+                text = data.decode("utf-8", errors="replace")
+            except Exception:  # noqa: BLE001 — last-ditch fallback
+                text = None
+            if text is not None:
+                return [
+                    TextContent(
+                        type="text",
+                        text=_fmt(
+                            {
+                                "id": attachment_id,
+                                "filename": filename,
+                                "mimeType": resolved_mime,
+                                "content": text[:_MAX_TEXT_CHARS],
+                                "truncated": len(text) > _MAX_TEXT_CHARS,
+                                "originalLength": len(text),
+                            }
+                        ),
+                    )
+                ]
+
+        if size <= _MAX_BINARY_BASE64_BYTES:
+            return [
+                TextContent(
+                    type="text",
+                    text=_fmt(
+                        {
+                            "id": attachment_id,
+                            "filename": filename,
+                            "size": size,
+                            "mimeType": resolved_mime,
+                            "contentBase64": base64.b64encode(data).decode("ascii"),
+                        }
+                    ),
+                )
+            ]
+        return [
+            TextContent(
+                type="text",
+                text=_fmt(
+                    {
+                        "id": attachment_id,
+                        "filename": filename,
+                        "size": size,
+                        "mimeType": resolved_mime,
+                        "hint": "Binary too large for inline base64. Use URL.",
+                        "contentUrl": content_url,
+                    }
+                ),
+            )
+        ]
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_issue_inspect"},
+        annotations={"title": "Get Attachment Thumbnail", "readOnlyHint": True},
+    )
+    async def get_attachment_thumbnail(
+        ctx: Context,
+        attachment_id: Annotated[str, Field(description="Numeric attachment id.")],
+    ) -> list[TextContent | ImageContent]:
+        """Fetch the server-generated thumbnail for an image attachment.
+
+        Cheaper than :func:`get_attachment_content` for large images — useful
+        when scanning many attachments to find the right one. Falls back to a
+        text-only metadata response when the server didn't generate a
+        thumbnail (non-image, or generation failed).
+        """
+        client = await _get_client(ctx)
+        try:
+            meta = client.rest_get(f"/rest/api/2/attachment/{attachment_id}")
+        except AnalystError as exc:
+            return [
+                TextContent(
+                    type="text",
+                    text=_err(
+                        f"get_attachment_thumbnail metadata failed: {exc}",
+                        status=exc.status,
+                    ),
+                )
+            ]
+        thumb_url = meta.get("thumbnail")
+        if not thumb_url:
+            return [
+                TextContent(
+                    type="text",
+                    text=_fmt(
+                        {
+                            "id": attachment_id,
+                            "filename": meta.get("filename"),
+                            "mimeType": meta.get("mimeType"),
+                            "error": (
+                                "no thumbnail available (non-image, or server "
+                                "did not generate one)."
+                            ),
+                        }
+                    ),
+                )
+            ]
+        try:
+            data = client.fetch_bytes(thumb_url, max_bytes=_MAX_IMAGE_BYTES)
+        except AnalystError as exc:
+            return [
+                TextContent(
+                    type="text",
+                    text=_err(
+                        f"thumbnail download failed: {exc}",
+                        status=exc.status,
+                    ),
+                )
+            ]
+        return [
+            TextContent(
+                type="text",
+                text=_fmt(
+                    {
+                        "id": attachment_id,
+                        "filename": meta.get("filename"),
+                        "mimeType": meta.get("mimeType"),
+                        "thumbnail": True,
+                    }
+                ),
+            ),
+            ImageContent(
+                type="image",
+                data=base64.b64encode(data).decode("ascii"),
+                mimeType="image/png",
+            ),
+        ]

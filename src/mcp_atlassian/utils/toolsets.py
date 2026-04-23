@@ -143,6 +143,23 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         description="Audit log and atlassian-jira.log access",
         default=False,
     ),
+    "jira_analyst_integrations": ToolsetDefinition(
+        name="jira_analyst_integrations",
+        description=(
+            "Integration surface audit (DC): UPM installed plugins & "
+            "modules, webhooks (v1.0 + v10.x fallback), application "
+            "links, application roles, dark features"
+        ),
+        default=False,
+    ),
+    "jira_analyst_issue_inspect": ToolsetDefinition(
+        name="jira_analyst_issue_inspect",
+        description=(
+            "Deep issue inspection: inline attachment content (images + "
+            "text), thumbnails, issue votes, remote links"
+        ),
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---

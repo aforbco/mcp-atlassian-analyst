@@ -99,17 +99,19 @@ Documentation is also available in [llms.txt format](https://llmstxt.org/), whic
 
 ## Jira DC Analyst toolset (this fork)
 
-This fork adds **79 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see:
+This fork adds **91 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see:
 
 | Toolset | Tools | What it exposes |
 |---------|-------|-----------------|
-| `jira_analyst_admin` | 43 | Workflows + raw XML, transitions (conditions/validators/post-functions), screens, screen schemes, permission / notification / workflow / field-config / issue-security schemes, groups, roles, application-role licensing, priority schemes, cluster info |
+| `jira_analyst_admin` | 45 | Workflows + raw XML, transitions (conditions/validators/post-functions), screens, screen schemes, permission / notification / workflow / field-config / issue-security schemes, groups, roles, application-role licensing, priority schemes, cluster info, **`my_permissions`, `get_reindex_status`** |
 | `jira_analyst_scriptrunner` | 11 | Listeners, behaviours, scripted fields, fragments, jobs, REST endpoints, escalation services — with **full Groovy source** |
 | `jira_analyst_jmwe` | 4 | JMWE event-based actions + shared actions |
 | `jira_analyst_structure` | 7 | ALM Works Structure plugin + Structure-Gantt configs |
 | `jira_analyst_assets` | 10 | Insight/Assets CMDB: schemas, object types, AQL search, imports |
 | `jira_analyst_automation` | 2 | Automation for Jira (A4J) rule inspection |
 | `jira_analyst_logs` | 2 | `/rest/auditing/1.0/events` + `atlassian-jira.log` tail |
+| `jira_analyst_integrations` | 6 | Integration surface: UPM plugins (list/get/modules), webhooks (v1.0 + v10.x fallback), application links, dark features |
+| `jira_analyst_issue_inspect` | 4 | Deep issue inspection: inline attachment content (image vision + text), thumbnails, votes, remote links |
 
 ### Enabling it
 

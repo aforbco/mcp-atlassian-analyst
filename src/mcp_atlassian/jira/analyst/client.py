@@ -102,22 +102,62 @@ class AnalystClient:
         self._raise_for_status(resp, f"SR action={action}")
         return resp.json()
 
-    def rest_get(self, path: str, **params: Any) -> Any:
-        """GET a Jira REST path relative to the instance base URL."""
+    def rest_get(
+        self, path: str, *, accept: str = "application/json", **params: Any
+    ) -> Any:
+        """GET a Jira REST path relative to the instance base URL.
+
+        ``accept`` overrides the default ``application/json`` — UPM requires
+        ``application/vnd.atl.plugins.installed+json`` or it returns HTML,
+        and the ApplicationLinks REST API defaults to XML unless
+        ``application/json`` is explicitly requested.
+        """
         url = f"{self._base_url}{path}"
         query = {k: str(v) for k, v in params.items() if v is not None and v != ""}
-        logger.debug("REST GET %s", path)
+        logger.debug("REST GET %s (accept=%s)", path, accept)
         try:
             resp = self._session.get(
                 url,
                 params=query,
-                headers={"Accept": "application/json"},
+                headers={"Accept": accept},
                 timeout=self._timeout,
             )
         except requests.RequestException as exc:
             raise AnalystError(f"transport error on GET {path}: {exc}") from exc
         self._raise_for_status(resp, f"REST GET {path}")
         return resp.json()
+
+    def fetch_bytes(self, url: str, *, max_bytes: int | None = None) -> bytes:
+        """GET raw bytes from a fully-qualified URL (for attachment downloads).
+
+        Uses the authenticated session. If ``max_bytes`` is set and the
+        Content-Length exceeds it, the call is aborted without downloading.
+        """
+        logger.debug("REST GET bytes %s", url)
+        try:
+            resp = self._session.get(url, stream=True, timeout=self._timeout)
+        except requests.RequestException as exc:
+            raise AnalystError(f"transport error on GET {url}: {exc}") from exc
+        self._raise_for_status(resp, f"GET {url}")
+        if max_bytes is not None:
+            cl = resp.headers.get("Content-Length")
+            if cl is not None:
+                try:
+                    if int(cl) > max_bytes:
+                        resp.close()
+                        raise AnalystError(
+                            f"content-length {cl} exceeds limit {max_bytes}",
+                            status=413,
+                        )
+                except ValueError:
+                    pass
+        data = resp.content
+        if max_bytes is not None and len(data) > max_bytes:
+            raise AnalystError(
+                f"downloaded {len(data)} bytes exceeds limit {max_bytes}",
+                status=413,
+            )
+        return data
 
     def rest_post(self, path: str, json_body: dict[str, Any]) -> Any:
         """POST a JSON body to a Jira REST path."""
