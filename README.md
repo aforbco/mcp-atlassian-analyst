@@ -99,7 +99,10 @@ Documentation is also available in [llms.txt format](https://llmstxt.org/), whic
 
 ## Jira DC Analyst toolset (this fork)
 
-This fork adds **91 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see:
+This fork adds **91 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see.
+
+**Full tool-by-tool list with descriptions → [TOOLS.md](TOOLS.md).**
+
 
 | Toolset | Tools | What it exposes |
 |---------|-------|-----------------|
