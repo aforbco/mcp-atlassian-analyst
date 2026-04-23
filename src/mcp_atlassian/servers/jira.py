@@ -3273,3 +3273,11 @@ async def get_issues_development_info(
         logger.error(f"Error getting development info for issues: {str(e)}")
         error_result = {"success": False, "error": str(e)}
         return json.dumps(error_result, indent=2, ensure_ascii=False)
+
+
+# Jira DC analyst extensions (ScriptRunner-backed, read-only). Import after
+# ``jira_mcp`` is fully defined so ``register_analyst_tools`` can attach its
+# ~60 tools to the same FastMCP instance.
+from mcp_atlassian.servers.jira_analyst import register_analyst_tools  # noqa: E402
+
+register_analyst_tools(jira_mcp)

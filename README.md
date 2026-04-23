@@ -97,6 +97,28 @@ Documentation is also available in [llms.txt format](https://llmstxt.org/), whic
 
 **72 tools total** — See [Tools Reference](https://mcp-atlassian.soomiles.com/docs/tools-reference) for the complete list.
 
+## Jira DC Analyst toolset (this fork)
+
+This fork adds **79 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see:
+
+| Toolset | Tools | What it exposes |
+|---------|-------|-----------------|
+| `jira_analyst_admin` | 43 | Workflows + raw XML, transitions (conditions/validators/post-functions), screens, screen schemes, permission / notification / workflow / field-config / issue-security schemes, groups, roles, application-role licensing, priority schemes, cluster info |
+| `jira_analyst_scriptrunner` | 11 | Listeners, behaviours, scripted fields, fragments, jobs, REST endpoints, escalation services — with **full Groovy source** |
+| `jira_analyst_jmwe` | 4 | JMWE event-based actions + shared actions |
+| `jira_analyst_structure` | 7 | ALM Works Structure plugin + Structure-Gantt configs |
+| `jira_analyst_assets` | 10 | Insight/Assets CMDB: schemas, object types, AQL search, imports |
+| `jira_analyst_automation` | 2 | Automation for Jira (A4J) rule inspection |
+| `jira_analyst_logs` | 2 | `/rest/auditing/1.0/events` + `atlassian-jira.log` tail |
+
+### Enabling it
+
+1. Install the Groovy REST endpoint on your Jira DC — copy [`scriptrunner/admin_analyst.groovy`](scriptrunner/admin_analyst.groovy) into a ScriptRunner custom REST endpoint exposed at `/rest/scriptrunner/latest/custom/adminAnalyst` (override with `JIRA_ANALYST_SR_PATH`).
+2. Authenticate as usual (`JIRA_URL` + `JIRA_PERSONAL_TOKEN`) — the analyst client reuses the existing mcp-atlassian session.
+3. Enable the toolsets you need via `TOOLSETS`, e.g. `TOOLSETS=default,jira_analyst_admin,jira_analyst_scriptrunner`.
+
+All analyst toolsets are **opt-in (default=false)** and tagged `read`, so they stay invisible unless explicitly enabled and survive `READ_ONLY_MODE=true`. Plugin-specific tools (SR, JMWE, Structure, Assets, A4J) only work if the corresponding plugin is installed on the target instance.
+
 ## Security
 
 Never share API tokens. Keep `.env` files secure. See [SECURITY.md](SECURITY.md).

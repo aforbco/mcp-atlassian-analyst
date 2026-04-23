@@ -100,6 +100,49 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         description="Development info (branches, PRs, commits)",
         default=False,
     ),
+    # --- DC Analyst extensions (read-only, SR-backed) ---
+    "jira_analyst_admin": ToolsetDefinition(
+        name="jira_analyst_admin",
+        description=(
+            "Jira DC admin analysis: workflows, screens, schemes "
+            "(permission/notification/workflow/field-config/issue-security), "
+            "groups, roles, application roles, priority schemes, cluster info"
+        ),
+        default=False,
+    ),
+    "jira_analyst_scriptrunner": ToolsetDefinition(
+        name="jira_analyst_scriptrunner",
+        description=(
+            "ScriptRunner inspection: listeners, behaviours, scripted fields, "
+            "fragments, jobs, REST endpoints, escalation services (full Groovy)"
+        ),
+        default=False,
+    ),
+    "jira_analyst_jmwe": ToolsetDefinition(
+        name="jira_analyst_jmwe",
+        description="JMWE inspection: event-based actions and shared actions",
+        default=False,
+    ),
+    "jira_analyst_structure": ToolsetDefinition(
+        name="jira_analyst_structure",
+        description="ALM Works Structure plugin: structures, views, Gantt configs",
+        default=False,
+    ),
+    "jira_analyst_assets": ToolsetDefinition(
+        name="jira_analyst_assets",
+        description="Insight/Assets CMDB: schemas, object types, AQL search, imports",
+        default=False,
+    ),
+    "jira_analyst_automation": ToolsetDefinition(
+        name="jira_analyst_automation",
+        description="Automation for Jira (A4J) rule inspection",
+        default=False,
+    ),
+    "jira_analyst_logs": ToolsetDefinition(
+        name="jira_analyst_logs",
+        description="Audit log and atlassian-jira.log access",
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---
