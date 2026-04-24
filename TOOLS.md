@@ -1,11 +1,11 @@
 # Tools reference — mcp-atlassian-analyst
 
-101 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
+113 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
 
-Auto-generated from tool registrations on `feat/jira-analyst-toolset-v3`.
+Auto-generated from tool registrations on `feat/jira-analyst-toolset-v4`.
 Source: [`src/mcp_atlassian/servers/jira_analyst.py`](src/mcp_atlassian/servers/jira_analyst.py).
 
-**150 tools total across 25 toolsets.**
+**162 tools total across 28 toolsets.**
 
 Tool names below include the `jira_` / `confluence_` prefix that FastMCP mounts automatically.
 
@@ -90,7 +90,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_jmwe_event_actions` | read | JMWE event-based actions — trigger event, project scope, JQL, condition, post-functions. |
 | `jira_list_jmwe_shared_actions` | read | Reusable post-functions, conditions, validators referenced from workflow transitions. |
 
-### `jira_analyst_structure` — ALM Works Structure + Gantt (7)
+### `jira_analyst_structure` — ALM Works Structure + Gantt (SR) (7)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -165,6 +165,33 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_dvcs_repositories` | read | ``GET /rest/bitbucket/1.0/organization/{id}/repository`` — |
 | `jira_list_gij_issue_branches` | read | ``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>`` — |
 | `jira_list_gij_issue_commits` | read | ``GET /rest/gitplugin/1.0/issues/{key}/commits`` — commits |
+
+### `jira_analyst_properties` — Entity properties (projects/issues/users) (6)
+
+| Tool | Kind | Description |
+|---|---|---|
+| `jira_get_issue_property` | read | Full JSON of one issue property. |
+| `jira_get_project_property` | read | Full JSON value of a single project property. The schema inside |
+| `jira_get_user_property` | read | Full JSON of one user property. |
+| `jira_list_issue_properties` | read | Keys of all entity properties on an issue. Useful for debugging |
+| `jira_list_project_properties` | read | Keys of all entity properties on a project — the first step when |
+| `jira_list_user_properties` | read | Keys of all per-user properties. Some plugins store personal |
+
+### `jira_analyst_sla` — Appfire/SaaSJet Time to SLA (3)
+
+| Tool | Kind | Description |
+|---|---|---|
+| `jira_list_sla_calendars` | read | ``GET /rest/sla/1.0/calendars`` — work schedules backing SLA |
+| `jira_list_sla_definitions` | read | ``GET /rest/sla/1.0/slas`` — every SLA definition on the instance |
+| `jira_search_sla_status` | read | Per-issue SLA status across a JQL result set. |
+
+### `jira_analyst_time_in_status` — OBSS Timepiece — Time in Status (3)
+
+| Tool | Kind | Description |
+|---|---|---|
+| `jira_get_issue_time_in_status` | read | ``GET /rest/tis/report/1.0/api/issue`` — seconds spent in each |
+| `jira_list_tis_calendars` | read | ``GET /rest/tis/report/1.0/data/calendars`` — work calendars |
+| `jira_search_time_in_status` | read | ``GET /rest/tis/report/1.0/api/list2`` (cursor-paginated, ~20× |
 
 ---
 

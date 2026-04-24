@@ -171,6 +171,35 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         ),
         default=False,
     ),
+    "jira_analyst_properties": ToolsetDefinition(
+        name="jira_analyst_properties",
+        description=(
+            "Jira entity-properties inspection — the generic 'JSON blob "
+            "storage' mechanism used by Jira itself and many plugins that "
+            "don't expose a REST API (JXL, Automation, assorted scripts). "
+            "Lets you list + read JSON payloads attached to projects, "
+            "issues, and users without ScriptRunner."
+        ),
+        default=False,
+    ),
+    "jira_analyst_sla": ToolsetDefinition(
+        name="jira_analyst_sla",
+        description=(
+            "Appfire/SaaSJet Time to SLA plugin inspection: list SLA "
+            "definitions, list calendars, query per-issue SLA status "
+            "(elapsed/remaining/breached) across a JQL"
+        ),
+        default=False,
+    ),
+    "jira_analyst_time_in_status": ToolsetDefinition(
+        name="jira_analyst_time_in_status",
+        description=(
+            "OBSS Timepiece — Time in Status for Jira inspection: "
+            "per-issue time-in-status breakdowns, bulk JQL reports "
+            "(list/average/sum output modes), configured calendars"
+        ),
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---

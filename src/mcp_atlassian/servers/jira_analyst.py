@@ -2111,3 +2111,452 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             return _err(
                 f"get_issue_dev_detail failed: {exc}", status=exc.status
             )
+
+    # =====================================================================
+    # Entity properties — the "JSON blob" storage that many plugins use
+    # instead of their own REST (JXL, Jira Automation, ScriptRunner,
+    # assorted integrations). Jira's own REST exposes per-scope CRUD, so
+    # we get read access to all of them through a tiny surface.
+    #
+    #   * Project:  GET /rest/api/2/project/{keyOrId}/properties
+    #   * Issue:    GET /rest/api/2/issue/{keyOrId}/properties
+    #   * User:     GET /rest/api/2/user/properties?username=X  (DC)
+    #
+    # A GET on the collection path returns the list of property *keys*;
+    # a GET on ``/{collection}/{key}`` returns the JSON value.
+    # Auth: whatever the user has on the scope (Browse Project / Browse
+    # Issue / the user themselves).  See
+    # https://developer.atlassian.com/server/jira/platform/entity-properties/
+    # =====================================================================
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_properties"},
+        annotations={"title": "List Project Properties", "readOnlyHint": True},
+    )
+    async def list_project_properties(
+        ctx: Context,
+        project_key: Annotated[str, Field(description="Project key or id.")],
+    ) -> str:
+        """Keys of all entity properties on a project — the first step when
+        discovering plugin-stored configuration (e.g. JXL sheets,
+        Automation-for-Jira rules, custom integration state). Vendors don't
+        publish their own key names; enumerate here first, then read with
+        ``get_project_property``."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(f"/rest/api/2/project/{project_key}/properties")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_project_properties failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_properties"},
+        annotations={"title": "Get Project Property", "readOnlyHint": True},
+    )
+    async def get_project_property(
+        ctx: Context,
+        project_key: Annotated[str, Field(description="Project key or id.")],
+        property_key: Annotated[
+            str, Field(description="Property key (from list_project_properties).")
+        ],
+    ) -> str:
+        """Full JSON value of a single project property. The schema inside
+        is vendor-private (JXL, Automation, etc. each define their own)
+        and may change between plugin versions — treat as opaque."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/api/2/project/{project_key}/properties/{property_key}"
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_project_property failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_properties"},
+        annotations={"title": "List Issue Properties", "readOnlyHint": True},
+    )
+    async def list_issue_properties(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Issue key or id.")],
+    ) -> str:
+        """Keys of all entity properties on an issue. Useful for debugging
+        per-issue plugin state (e.g. assorted scripting caches, sprint
+        metadata written by agile plugins)."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(f"/rest/api/2/issue/{issue_key}/properties")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_issue_properties failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_properties"},
+        annotations={"title": "Get Issue Property", "readOnlyHint": True},
+    )
+    async def get_issue_property(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Issue key or id.")],
+        property_key: Annotated[str, Field(description="Property key.")],
+    ) -> str:
+        """Full JSON of one issue property."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/api/2/issue/{issue_key}/properties/{property_key}"
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_issue_property failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_properties"},
+        annotations={"title": "List User Properties", "readOnlyHint": True},
+    )
+    async def list_user_properties(
+        ctx: Context,
+        username: Annotated[
+            str,
+            Field(
+                description=(
+                    "DC username. User-properties endpoint is DC-only — "
+                    "Cloud uses accountId instead."
+                )
+            ),
+        ],
+    ) -> str:
+        """Keys of all per-user properties. Some plugins store personal
+        preferences there (e.g. JXL may keep private sheets here rather
+        than on a project)."""
+        if not username:
+            return _err("username is required")
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    "/rest/api/2/user/properties", username=username
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"list_user_properties failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_properties"},
+        annotations={"title": "Get User Property", "readOnlyHint": True},
+    )
+    async def get_user_property(
+        ctx: Context,
+        username: Annotated[str, Field(description="DC username.")],
+        property_key: Annotated[str, Field(description="Property key.")],
+    ) -> str:
+        """Full JSON of one user property."""
+        if not username:
+            return _err("username is required")
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get(
+                    f"/rest/api/2/user/properties/{property_key}",
+                    username=username,
+                )
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_user_property failed: {exc}", status=exc.status
+            )
+
+    # =====================================================================
+    # Appfire / SaaSJet "Time to SLA" (Marketplace 1211843) — /rest/sla/1.0/
+    #
+    # The plugin's namespace is confirmed by Appfire's public DC docs
+    # (appfire.atlassian.net/wiki/spaces/TTS/). Exact leaf paths were not
+    # available in machine-readable form at the time of porting; the paths
+    # below follow the most widely-cited patterns from Appfire/SaaSJet
+    # blog posts and support articles. If a call returns 404, fall back
+    # to the Postman collection linked from the Appfire docs.
+    # =====================================================================
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_sla"},
+        annotations={"title": "List SLA Definitions", "readOnlyHint": True},
+    )
+    async def list_sla_definitions(ctx: Context) -> str:
+        """``GET /rest/sla/1.0/slas`` — every SLA definition on the instance
+        (id, name, JQL scope, goals, calendar id). Admin-only in most
+        configurations.
+
+        If this 404s, the instance may be on an older Time to SLA version
+        where the list is exposed at ``/rest/sla/1.0/definitions``; try
+        that path manually via the upstream ``jira_development_rest`` tool
+        or open an Appfire support ticket for the exact leaf path.
+        """
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/sla/1.0/slas"))
+        except AnalystError as exc:
+            if exc.status == 404:
+                try:
+                    return _fmt(client.rest_get("/rest/sla/1.0/definitions"))
+                except AnalystError as exc2:
+                    return _err(
+                        "list_sla_definitions failed on both known leaf "
+                        "paths (/slas and /definitions)",
+                        status=exc2.status,
+                        detail=str(exc2),
+                    )
+            return _err(
+                f"list_sla_definitions failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_sla"},
+        annotations={"title": "List SLA Calendars", "readOnlyHint": True},
+    )
+    async def list_sla_calendars(ctx: Context) -> str:
+        """``GET /rest/sla/1.0/calendars`` — work schedules backing SLA
+        calculations (working days, hours, holidays).
+
+        Falls back to ``/rest/sla/1.0/slas/calendars`` if the first path
+        404s (older plugin layout).
+        """
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/sla/1.0/calendars"))
+        except AnalystError as exc:
+            if exc.status == 404:
+                try:
+                    return _fmt(client.rest_get("/rest/sla/1.0/slas/calendars"))
+                except AnalystError as exc2:
+                    return _err(
+                        "list_sla_calendars failed on both known leaf paths",
+                        status=exc2.status,
+                        detail=str(exc2),
+                    )
+            return _err(f"list_sla_calendars failed: {exc}", status=exc.status)
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_sla"},
+        annotations={"title": "Search SLA Status by JQL", "readOnlyHint": True},
+    )
+    async def search_sla_status(
+        ctx: Context,
+        jql: Annotated[
+            str,
+            Field(description="JQL selecting issues whose SLA status you want."),
+        ],
+        start_at: Annotated[int, Field(description="Pagination start (0-based).")] = 0,
+        max_results: Annotated[
+            int, Field(description="Page size (1..100 per plugin docs).")
+        ] = 50,
+    ) -> str:
+        """Per-issue SLA status across a JQL result set.
+
+        Returns each issue with its SLAs (elapsed / remaining / paused /
+        breached / startDate / targetDate / stopDate / calendarId). The
+        most valuable analyst endpoint of this plugin — answers "which
+        tickets are breached" and "which SLAs are close to breach" in a
+        single call.
+
+        If this 404s, the instance may expose the endpoint as
+        ``/rest/sla/1.0/slaSearch``. Try that manually.
+        """
+        if not jql.strip():
+            return _err("jql is required")
+        params = {
+            "jql": jql,
+            "startAt": max(0, int(start_at)),
+            "maxResults": max(1, min(int(max_results), 100)),
+        }
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/sla/1.0/search", **params))
+        except AnalystError as exc:
+            if exc.status == 404:
+                try:
+                    return _fmt(
+                        client.rest_get("/rest/sla/1.0/slaSearch", **params)
+                    )
+                except AnalystError as exc2:
+                    return _err(
+                        "search_sla_status failed on both known leaf paths",
+                        status=exc2.status,
+                        detail=str(exc2),
+                    )
+            return _err(f"search_sla_status failed: {exc}", status=exc.status)
+
+    # =====================================================================
+    # OBSS "Timepiece — Time in Status for Jira" (Marketplace 1211756)
+    # Public REST at /rest/tis/report/1.0/ — well-documented:
+    # https://documentation.obss.tech/timepiece-time-in-status-for-jira-data-center/
+    #
+    # The plugin's legacy /api/list was deprecated after August 2025 when
+    # Atlassian's JQL search API changed; we target the modern /api/list2
+    # only, which uses cursor-paging and supports up to 1000 issues/page.
+    # =====================================================================
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_time_in_status"},
+        annotations={"title": "Get Time-in-Status for Issue", "readOnlyHint": True},
+    )
+    async def get_issue_time_in_status(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Issue key, e.g. 'HR-123'.")],
+        columns_by: Annotated[
+            str,
+            Field(
+                description=(
+                    "Breakdown axis: 'statuses' (default), 'assignees', "
+                    "'groups', or a custom-field id for custom-breakdowns."
+                )
+            ),
+        ] = "statuses",
+        calendar: Annotated[
+            str,
+            Field(
+                description=(
+                    "Optional work-calendar id (from ``list_tis_calendars``). "
+                    "Omit for 24×7."
+                )
+            ),
+        ] = "",
+        view_format: Annotated[
+            str,
+            Field(
+                description=(
+                    "'duration' (e.g. '2d 3h'), 'decimal' (hours), or "
+                    "'raw-seconds'. Default 'raw-seconds' — easier to "
+                    "post-process programmatically."
+                )
+            ),
+        ] = "raw-seconds",
+    ) -> str:
+        """``GET /rest/tis/report/1.0/api/issue`` — seconds spent in each
+        status (or assignee / group / custom-field bucket depending on
+        ``columns_by``). Any authenticated user with Browse permission on
+        the issue can call this."""
+        params: dict[str, Any] = {
+            "issueKey": issue_key,
+            "columnsBy": columns_by,
+            "viewFormat": view_format,
+        }
+        if calendar:
+            params["calendar"] = calendar
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get("/rest/tis/report/1.0/api/issue", **params)
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_issue_time_in_status failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_time_in_status"},
+        annotations={"title": "Search Time-in-Status by JQL", "readOnlyHint": True},
+    )
+    async def search_time_in_status(
+        ctx: Context,
+        jql: Annotated[
+            str,
+            Field(description="JQL selecting target issues (custom JQL filter mode)."),
+        ],
+        output_type: Annotated[
+            str,
+            Field(
+                description=(
+                    "'list' = per-issue breakdown, 'average' = average per "
+                    "status across the set, 'sum' = totals across the set."
+                )
+            ),
+        ] = "list",
+        columns_by: Annotated[
+            str,
+            Field(description="'statuses', 'assignees', 'groups', or custom-field id."),
+        ] = "statuses",
+        page_size: Annotated[
+            int,
+            Field(description="Cursor page size (1..1000). Default 200."),
+        ] = 200,
+        next_page_token: Annotated[
+            str,
+            Field(
+                description=(
+                    "Cursor from a previous call's ``nextPageToken``. Leave "
+                    "empty for the first page."
+                )
+            ),
+        ] = "",
+        view_format: Annotated[
+            str, Field(description="'duration', 'decimal', or 'raw-seconds'.")
+        ] = "raw-seconds",
+        calendar: Annotated[
+            str, Field(description="Optional work-calendar id.")
+        ] = "",
+    ) -> str:
+        """``GET /rest/tis/report/1.0/api/list2`` (cursor-paginated, ~20×
+        faster than the deprecated ``/api/list`` and still supported after
+        Atlassian's Aug 2025 JQL search API change).
+
+        Output modes:
+        * ``list`` — per-issue seconds-in-each-status table
+        * ``average`` — average per status across the JQL set (how long does
+          a ticket typically sit in Code Review?)
+        * ``sum`` — total across the set (team-wide throughput signal)
+        """
+        if not jql.strip():
+            return _err("jql is required")
+        if output_type not in ("list", "average", "sum"):
+            return _err("output_type must be 'list', 'average', or 'sum'")
+        params: dict[str, Any] = {
+            "filterType": "customjql",
+            "customjql": jql,
+            "outputType": output_type,
+            "columnsBy": columns_by,
+            "pageSize": max(1, min(int(page_size), 1000)),
+            "viewFormat": view_format,
+        }
+        if next_page_token:
+            params["nextPageToken"] = next_page_token
+        if calendar:
+            params["calendar"] = calendar
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get("/rest/tis/report/1.0/api/list2", **params)
+            )
+        except AnalystError as exc:
+            return _err(
+                f"search_time_in_status failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_time_in_status"},
+        annotations={"title": "List TIS Calendars", "readOnlyHint": True},
+    )
+    async def list_tis_calendars(ctx: Context) -> str:
+        """``GET /rest/tis/report/1.0/data/calendars`` — work calendars
+        configured for Time-in-Status reports (working days, hours,
+        holidays). IDs from this list are accepted by
+        ``get_issue_time_in_status`` / ``search_time_in_status``."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/tis/report/1.0/data/calendars"))
+        except AnalystError as exc:
+            return _err(
+                f"list_tis_calendars failed: {exc}", status=exc.status
+            )
