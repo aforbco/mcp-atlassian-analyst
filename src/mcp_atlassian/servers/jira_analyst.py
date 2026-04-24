@@ -215,7 +215,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Permission Schemes", "readOnlyHint": True},
     )
-    async def list_permission_schemes(ctx: Context) -> str:
+    async def list_permission_schemes(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List all permission schemes with associated project keys."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_permission_schemes"))
@@ -236,7 +241,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Notification Schemes", "readOnlyHint": True},
     )
-    async def list_notification_schemes(ctx: Context) -> str:
+    async def list_notification_schemes(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List all notification schemes with associated project keys."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_notification_schemes"))
@@ -257,7 +267,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Workflow Schemes", "readOnlyHint": True},
     )
-    async def list_workflow_schemes(ctx: Context) -> str:
+    async def list_workflow_schemes(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List all workflow schemes with associated project keys."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_workflow_schemes"))
@@ -326,7 +341,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Project Roles", "readOnlyHint": True},
     )
-    async def list_project_roles(ctx: Context) -> str:
+    async def list_project_roles(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All project roles — id, name, description."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_project_roles"))
@@ -365,7 +385,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Application Roles", "readOnlyHint": True},
     )
-    async def list_application_roles(ctx: Context) -> str:
+    async def list_application_roles(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """License tiers with seat usage — critical for capacity audits."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_application_roles"))
@@ -374,7 +399,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Issue Types", "readOnlyHint": True},
     )
-    async def list_issue_types(ctx: Context) -> str:
+    async def list_issue_types(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All issue types — id, name, description, isSubtask, icon."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_issue_types"))
@@ -395,7 +425,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Reference Data", "readOnlyHint": True},
     )
-    async def list_reference_data(ctx: Context) -> str:
+    async def list_reference_data(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All statuses (with categories), priorities, resolutions."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_reference_data"))
@@ -455,7 +490,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Issue Link Types", "readOnlyHint": True},
     )
-    async def list_issue_link_types(ctx: Context) -> str:
+    async def list_issue_link_types(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All link types — name, inward/outward descriptions."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_issue_link_types"))
@@ -464,7 +504,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Issue Security Schemes", "readOnlyHint": True},
     )
-    async def list_issue_security_schemes(ctx: Context) -> str:
+    async def list_issue_security_schemes(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All issue security schemes with associated project keys."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_issue_security_schemes"))
@@ -485,7 +530,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "Get Server Info", "readOnlyHint": True},
     )
-    async def get_server_info(ctx: Context) -> str:
+    async def get_server_info(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Jira version, build number, base URL, title."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("get_server_info"))
@@ -506,7 +556,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Project Categories", "readOnlyHint": True},
     )
-    async def list_project_categories(ctx: Context) -> str:
+    async def list_project_categories(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Project categories — used to group projects."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_project_categories"))
@@ -515,7 +570,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Event Types", "readOnlyHint": True},
     )
-    async def list_event_types(ctx: Context) -> str:
+    async def list_event_types(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All event types — maps event IDs in notification schemes to human-readable names."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_event_types"))
@@ -524,7 +584,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Global Permissions", "readOnlyHint": True},
     )
-    async def list_global_permissions(ctx: Context) -> str:
+    async def list_global_permissions(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Who has SYSTEM_ADMIN, ADMINISTER, USE, BULK_CHANGE, etc."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_global_permissions"))
@@ -557,7 +622,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "Get Cluster Info", "readOnlyHint": True},
     )
-    async def get_cluster_info(ctx: Context) -> str:
+    async def get_cluster_info(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """DC cluster: is clustered, node count, each node ID/state/IP, current node flag."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("get_cluster_info"))
@@ -566,7 +636,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Priority Schemes", "readOnlyHint": True},
     )
-    async def list_priority_schemes(ctx: Context) -> str:
+    async def list_priority_schemes(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Priority schemes (Jira 10.x). Error hint if not available."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_priority_schemes"))
@@ -590,7 +665,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "List Custom Field Types", "readOnlyHint": True},
     )
-    async def list_custom_field_types(ctx: Context) -> str:
+    async def list_custom_field_types(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Available custom field types — essential for building admin ТЗ."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_custom_field_types"))
@@ -603,7 +683,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_assets"},
         annotations={"title": "List Asset Schemas", "readOnlyHint": True},
     )
-    async def list_object_schemas(ctx: Context) -> str:
+    async def list_object_schemas(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """All Insight/Assets object schemas."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_object_schemas"))
@@ -910,7 +995,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_scriptrunner"},
         annotations={"title": "List ScriptRunner Fragments", "readOnlyHint": True},
     )
-    async def list_sr_fragments(ctx: Context) -> str:
+    async def list_sr_fragments(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Web items, panels, sections, and show/hide conditions injected into the UI."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_sr_fragments"))
@@ -931,7 +1021,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_scriptrunner"},
         annotations={"title": "List ScriptRunner REST Endpoints", "readOnlyHint": True},
     )
-    async def list_sr_endpoints(ctx: Context) -> str:
+    async def list_sr_endpoints(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Custom REST endpoints found under JIRA_HOME/scripts — name, method, preview."""
         client = await _get_client(ctx)
         return _fmt(client.sr_action("list_sr_endpoints"))
@@ -1233,7 +1328,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_integrations"},
         annotations={"title": "List Installed Plugins (UPM)", "readOnlyHint": True},
     )
-    async def list_plugins(ctx: Context) -> str:
+    async def list_plugins(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Installed plugins via Universal Plugin Manager (SYS_ADMIN required)."""
         client = await _get_client(ctx)
         try:
@@ -1294,7 +1394,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_integrations"},
         annotations={"title": "List Webhooks", "readOnlyHint": True},
     )
-    async def list_webhooks(ctx: Context) -> str:
+    async def list_webhooks(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List instance webhooks.
 
         Jira ≤ 9.x exposes them at ``/rest/webhooks/1.0/webhook``; Jira ≥ 10.x
@@ -1325,7 +1430,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_integrations"},
         annotations={"title": "List Application Links", "readOnlyHint": True},
     )
-    async def list_application_links(ctx: Context) -> str:
+    async def list_application_links(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Application links to Confluence/Bitbucket/other (admin-only).
 
         Uses ``/rest/applinks/3.0/applicationlink`` and forces
@@ -1349,7 +1459,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_integrations"},
         annotations={"title": "List Dark Features (best-effort)", "readOnlyHint": True},
     )
-    async def list_dark_features(ctx: Context) -> str:
+    async def list_dark_features(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Dark-features toggles via ``/rest/internal/1.0/darkFeatures``.
 
         This is an **internal/private** Atlassian API — the closest thing
@@ -1425,7 +1540,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_admin"},
         annotations={"title": "Reindex Status", "readOnlyHint": True},
     )
-    async def get_reindex_status(ctx: Context) -> str:
+    async def get_reindex_status(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Get the current or last Jira reindex progress — is indexing running, stuck, or done.
 
         Diagnostic for "search results are stale" or "custom fields not
@@ -2325,7 +2445,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_sla"},
         annotations={"title": "List SLA Definitions", "readOnlyHint": True},
     )
-    async def list_sla_definitions(ctx: Context) -> str:
+    async def list_sla_definitions(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List all SLA definitions configured by the Time to SLA plugin.
 
         Each definition: id, name, JQL scope, goals, calendar id. Admin-only
@@ -2355,7 +2480,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_sla"},
         annotations={"title": "List SLA Calendars", "readOnlyHint": True},
     )
-    async def list_sla_calendars(ctx: Context) -> str:
+    async def list_sla_calendars(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List work calendars used for SLA calculations — working days, hours, holidays.
 
         Backed by ``GET /rest/sla/1.0/calendars`` with automatic fallback
@@ -2582,7 +2712,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_time_in_status"},
         annotations={"title": "List TIS Calendars", "readOnlyHint": True},
     )
-    async def list_tis_calendars(ctx: Context) -> str:
+    async def list_tis_calendars(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """List work calendars configured for Time-in-Status reports.
 
         Returns calendar ids + working days/hours/holidays. Accepted by
@@ -2702,7 +2837,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_email"},
         annotations={"title": "JETI Outgoing Mail Queue", "readOnlyHint": True},
     )
-    async def get_jeti_outgoing_queue_stats(ctx: Context) -> str:
+    async def get_jeti_outgoing_queue_stats(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Diagnose "JETI emails aren't arriving" — outbound mail queue stats.
 
         Shows queue depth and processing lag. JETI v9.0.0+ only. Backed by
@@ -2727,7 +2867,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_email"},
         annotations={"title": "JETI Incoming Mail Queue", "readOnlyHint": True},
     )
-    async def get_jeti_incoming_queue_stats(ctx: Context) -> str:
+    async def get_jeti_incoming_queue_stats(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Diagnose inbound JETI mail handlers — are they processing or stuck.
 
         Queue depth and lag for incoming mail. JETI v9.0.0+ only. Backed by
@@ -2749,7 +2894,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         tags={"jira", "read", "toolset:jira_analyst_email"},
         annotations={"title": "JETI Mail Generation Queue", "readOnlyHint": True},
     )
-    async def get_jeti_generation_queue_stats(ctx: Context) -> str:
+    async def get_jeti_generation_queue_stats(ctx: Context,
+        random_string: Annotated[
+            str,
+            Field(description="Reserved — included to keep a non-empty tool schema for OpenAI-gateway compatibility."),
+        ] = "",
+    ) -> str:
         """Spot bottlenecks between JETI event firing and email send — template-rendering queue.
 
         Diagnostic for "event fired but no email yet". JETI v9.0.0+ only.
