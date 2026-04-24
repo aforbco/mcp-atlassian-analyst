@@ -2,14 +2,13 @@
 
 118 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
 
-Auto-generated from tool registrations on `feat/jira-analyst-toolset-v5`.
-Source: [`src/mcp_atlassian/servers/jira_analyst.py`](src/mcp_atlassian/servers/jira_analyst.py).
+Auto-generated from tool registrations. First docstring line = intent-oriented summary (verb-first, user-question style).
 
 **167 tools total across 29 toolsets.**
 
 Tool names below include the `jira_` / `confluence_` prefix that FastMCP mounts automatically.
 
-Kind legend: **read** = read-only · **write** = state-changing (disabled under `READ_ONLY_MODE`) · **write (destructive)** = carries the MCP `destructiveHint` annotation so clients prompt before executing.
+Kind legend: **read** = read-only · **write** = state-changing · **write (destructive)** = carries `destructiveHint`, MCP clients prompt before executing.
 
 ---
 
@@ -30,7 +29,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_get_permission_scheme` | read | All permission grants (permission key, grant type, grant value). |
 | `jira_get_project_config` | read | Full project admin view — all assigned schemes, roles with members, components, versions. |
 | `jira_get_project_role_members` | read | Users and groups assigned to a role in the given project. |
-| `jira_get_reindex_status` | read | ``GET /rest/api/2/reindex`` — current/last reindex progress. |
+| `jira_get_reindex_status` | read | Get the current or last Jira reindex progress — is indexing running, stuck, or done. |
 | `jira_get_screen` | read | Screen tabs with their fields (id, name, position). |
 | `jira_get_server_info` | read | Jira version, build number, base URL, title. |
 | `jira_get_user` | read | Display name, email, active, groups, application roles (Software/JSM/Core). |
@@ -63,9 +62,9 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_shared_filters` | read | All shared filters — name, JQL, owner, favourite count. |
 | `jira_list_workflow_schemes` | read | List all workflow schemes with associated project keys. |
 | `jira_list_workflows` | read | List all Jira workflows with step counts and last-updated dates. |
-| `jira_my_permissions` | read | ``GET /rest/api/2/mypermissions`` — resolves the effective permissions |
+| `jira_my_permissions` | read | Check which permissions the authenticated user has on a project or issue. |
 
-### `jira_analyst_scriptrunner` — ScriptRunner inspection (full Groovy source) (11)
+### `jira_analyst_scriptrunner` — ScriptRunner inspection (11)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -102,7 +101,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_structure_views` | read | Structure views — id, name, owner, shared, column count. |
 | `jira_list_structures` | read | Structure plugin hierarchies — id, name, description, owner, archived state. |
 
-### `jira_analyst_assets` — Insight/Assets CMDB (read) (10)
+### `jira_analyst_assets` — Insight/Assets CMDB (10)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -131,7 +130,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_get_audit_log` | read | Admin audit events — permission changes, scheme edits, user management. |
 | `jira_get_system_log` | read | Tail of atlassian-jira.log for debugging plugin errors and startup issues. |
 
-### `jira_analyst_integrations` — Plugins, webhooks, applinks (6)
+### `jira_analyst_integrations` — Plugins/webhooks/applinks (6)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -155,16 +154,16 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 
 | Tool | Kind | Description |
 |---|---|---|
-| `jira_get_dvcs_organization` | read | ``GET /rest/bitbucket/1.0/organization/{id}`` — org detail: |
-| `jira_get_dvcs_repository` | read | ``GET /rest/bitbucket/1.0/repository/{id}`` — single repo detail. |
-| `jira_get_dvcs_sync_audit` | read | ``GET /rest/bitbucket/1.0/audit/repository/{id\|all}`` — this |
-| `jira_get_gij_commit_issues` | read | ``GET /rest/gitplugin/1.0/commit/{sha}/issues`` — reverse |
-| `jira_get_issue_dev_detail` | read | ``GET /rest/dev-status/1.0/issue/detail`` — raw dev-panel payload |
-| `jira_get_issue_dev_summary` | read | ``GET /rest/dev-status/1.0/issue/summary?issueId=<id>`` — counts |
-| `jira_list_dvcs_organizations` | read | ``GET /rest/bitbucket/1.0/organization/page`` — connected |
-| `jira_list_dvcs_repositories` | read | ``GET /rest/bitbucket/1.0/organization/{id}/repository`` — |
-| `jira_list_gij_issue_branches` | read | ``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>`` — |
-| `jira_list_gij_issue_commits` | read | ``GET /rest/gitplugin/1.0/issues/{key}/commits`` — commits |
+| `jira_get_dvcs_organization` | read | Get full configuration of one DVCS organization. |
+| `jira_get_dvcs_repository` | read | Get one DVCS-linked repository by id — slug, sync settings, activity timestamps. |
+| `jira_get_dvcs_sync_audit` | read | Diagnose why the Git dev panel isn't updating — DVCS sync audit log. |
+| `jira_get_gij_commit_issues` | read | Find which Jira issues a commit is linked to — reverse commit→issue lookup. |
+| `jira_get_issue_dev_detail` | read | Get the full Git dev-panel detail for an issue — raw commits / branches / PRs. |
+| `jira_get_issue_dev_summary` | read | Summary of the Git dev panel on an issue — counts of PRs/MRs, branches, commits, repositories. |
+| `jira_list_dvcs_organizations` | read | List connected DVCS organizations (GitHub / GitLab / Bitbucket). |
+| `jira_list_dvcs_repositories` | read | List repositories synced from a DVCS organization. |
+| `jira_list_gij_issue_branches` | read | List Git branches linked to a Jira issue via the BigBrassBand plugin. |
+| `jira_list_gij_issue_commits` | read | List Git commits linked to a Jira issue via the BigBrassBand plugin. |
 
 ### `jira_analyst_properties` — Entity properties (6)
 
@@ -181,27 +180,27 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 
 | Tool | Kind | Description |
 |---|---|---|
-| `jira_list_sla_calendars` | read | ``GET /rest/sla/1.0/calendars`` — work schedules backing SLA |
-| `jira_list_sla_definitions` | read | ``GET /rest/sla/1.0/slas`` — every SLA definition on the instance |
+| `jira_list_sla_calendars` | read | List work calendars used for SLA calculations — working days, hours, holidays. |
+| `jira_list_sla_definitions` | read | List all SLA definitions configured by the Time to SLA plugin. |
 | `jira_search_sla_status` | read | Per-issue SLA status across a JQL result set. |
 
 ### `jira_analyst_time_in_status` — OBSS Timepiece (Time in Status) (3)
 
 | Tool | Kind | Description |
 |---|---|---|
-| `jira_get_issue_time_in_status` | read | ``GET /rest/tis/report/1.0/api/issue`` — seconds spent in each |
-| `jira_list_tis_calendars` | read | ``GET /rest/tis/report/1.0/data/calendars`` — work calendars |
-| `jira_search_time_in_status` | read | ``GET /rest/tis/report/1.0/api/list2`` (cursor-paginated, ~20× |
+| `jira_get_issue_time_in_status` | read | Get time-in-status breakdown for one issue — how long it sat in each status. |
+| `jira_list_tis_calendars` | read | List work calendars configured for Time-in-Status reports. |
+| `jira_search_time_in_status` | read | Run a bulk time-in-status report across a JQL — per-issue, average, or sum. |
 
 ### `jira_analyst_email` — MetaInf Email This Issue (JETI) (5)
 
 | Tool | Kind | Description |
 |---|---|---|
-| `jira_get_jeti_audit_count` | read | ``GET /rest/jeti/1.0/email/stat`` — count of audit-log entries |
-| `jira_get_jeti_generation_queue_stats` | read | ``GET /rest/jeti/1.0/mailGenerationQueue/statistic`` — mail |
-| `jira_get_jeti_incoming_queue_stats` | read | ``GET /rest/jeti/1.0/incomingMailQueue/statistic`` — inbound mail |
-| `jira_get_jeti_outgoing_queue_stats` | read | ``GET /rest/jeti/1.0/outgoingMailQueue/statistic`` — outbound |
-| `jira_search_jeti_audit_log` | read | ``GET /rest/jeti/1.0/email/query`` — audit log of emails JETI has |
+| `jira_get_jeti_audit_count` | read | Count JETI audit-log entries matching a filter — cheap sanity check. |
+| `jira_get_jeti_generation_queue_stats` | read | Spot bottlenecks between JETI event firing and email send — template-rendering queue. |
+| `jira_get_jeti_incoming_queue_stats` | read | Diagnose inbound JETI mail handlers — are they processing or stuck. |
+| `jira_get_jeti_outgoing_queue_stats` | read | Diagnose "JETI emails aren't arriving" — outbound mail queue stats. |
+| `jira_search_jeti_audit_log` | read | Find who received what email for a Jira issue and when. |
 
 ---
 

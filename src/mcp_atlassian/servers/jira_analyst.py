@@ -1400,10 +1400,14 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ] = "",
     ) -> str:
-        """``GET /rest/api/2/mypermissions`` — resolves the effective permissions
-        for the authenticated user on the given scope. DC returns the full list
-        if ``permissions`` is omitted; we pass it through for forward-compat
-        with Cloud where it's mandatory."""
+        """Check which permissions the authenticated user has on a project or issue.
+
+        Answers "can user X do Y on project Z" without manually cross-referencing
+        permission schemes + roles + groups. Backed by
+        ``GET /rest/api/2/mypermissions``. DC returns the full list if
+        ``permissions`` is omitted; we pass it through for forward-compat with
+        Cloud where it's mandatory.
+        """
         params: dict[str, Any] = {}
         if project_key:
             params["projectKey"] = project_key
@@ -1422,11 +1426,14 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "Reindex Status", "readOnlyHint": True},
     )
     async def get_reindex_status(ctx: Context) -> str:
-        """``GET /rest/api/2/reindex`` — current/last reindex progress.
+        """Get the current or last Jira reindex progress — is indexing running, stuck, or done.
 
-        Returns 404 until the instance has run at least one reindex; we
-        translate that into an explanatory JSON response instead of a raw
-        error so callers can tell "never reindexed" from "permission denied".
+        Diagnostic for "search results are stale" or "custom fields not
+        showing up". Backed by ``GET /rest/api/2/reindex``.
+
+        Returns a ``no_reindex_recorded`` sentinel instead of a raw 404 when
+        the instance has never reindexed, so callers can tell "never
+        reindexed" from "permission denied".
         """
         client = await _get_client(ctx)
         try:
@@ -1804,9 +1811,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             int, Field(description="Page size (1..100).")
         ] = 50,
     ) -> str:
-        """``GET /rest/bitbucket/1.0/organization/page`` — connected
-        GitHub/GitLab/Bitbucket orgs, their type and OAuth key.
-        Paginated — pagination is not optional on DC."""
+        """List connected DVCS organizations (GitHub / GitLab / Bitbucket).
+
+        Shows which Git providers are wired to Jira, their type and OAuth key.
+        Paginated — pagination is not optional on DC. Backed by
+        ``GET /rest/bitbucket/1.0/organization/page``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -1829,9 +1839,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         ctx: Context,
         organization_id: Annotated[str, Field(description="Organization id.")],
     ) -> str:
-        """``GET /rest/bitbucket/1.0/organization/{id}`` — org detail:
-        name, baseUrl, type, autolinkNewRepos, smartcommitsOnNewRepos,
-        defaultGroupsSlugs, principal."""
+        """Get full configuration of one DVCS organization.
+
+        Returns name, baseUrl, type, autolinkNewRepos, smartcommitsOnNewRepos,
+        defaultGroupsSlugs, principal. Backed by
+        ``GET /rest/bitbucket/1.0/organization/{id}``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -1852,10 +1865,13 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         ctx: Context,
         organization_id: Annotated[str, Field(description="Organization id.")],
     ) -> str:
-        """``GET /rest/bitbucket/1.0/organization/{id}/repository`` —
-        repos synced for an org. Per-repo: slug, linked, smartcommitsEnabled,
-        lastCommitDate, activityLastUpdatedTimestamp. Note singular
-        ``/repository`` — documented path."""
+        """List repositories synced from a DVCS organization.
+
+        Per-repo: slug, linked, smartcommitsEnabled, lastCommitDate,
+        activityLastUpdatedTimestamp. Backed by
+        ``GET /rest/bitbucket/1.0/organization/{id}/repository`` (note the
+        documented singular ``/repository``).
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -1876,7 +1892,10 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         ctx: Context,
         repository_id: Annotated[str, Field(description="Repository id.")],
     ) -> str:
-        """``GET /rest/bitbucket/1.0/repository/{id}`` — single repo detail."""
+        """Get one DVCS-linked repository by id — slug, sync settings, activity timestamps.
+
+        Backed by ``GET /rest/bitbucket/1.0/repository/{id}``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -1903,11 +1922,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ] = "",
     ) -> str:
-        """``GET /rest/bitbucket/1.0/audit/repository/{id|all}`` — this
-        is the canonical "why isn't the Git panel updating" answer:
-        firstRequestDate / lastActivityDate / totalChangesetCount /
-        flightTimeMs and, on failure, exception + message + status
-        (``OK`` / ``SYNC_ERROR`` / ``SYNC_WARNING``).
+        """Diagnose why the Git dev panel isn't updating — DVCS sync audit log.
+
+        The canonical "last sync time + error message" endpoint: firstRequestDate,
+        lastActivityDate, totalChangesetCount, flightTimeMs and — on failure —
+        exception + message + status (``OK`` / ``SYNC_ERROR`` / ``SYNC_WARNING``).
+        Backed by ``GET /rest/bitbucket/1.0/audit/repository/{id|all}``.
 
         A common mistake is to hit ``/repository/{id}/sync`` for status —
         that path is the resync trigger, not a status read.
@@ -1941,10 +1961,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ] = False,
     ) -> str:
-        """``GET /rest/gitplugin/1.0/issues/{key}/commits`` — commits
-        linked to an issue via the BigBrassBand Git Integration plugin.
-        Respects issue-view permission (any user who can see the issue
-        can list its commits)."""
+        """List Git commits linked to a Jira issue via the BigBrassBand plugin.
+
+        Useful for "which commits reference this ticket" — richer than
+        dev-status (full SHAs, author emails, messages). Respects issue-view
+        permission. Backed by ``GET /rest/gitplugin/1.0/issues/{key}/commits``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -1974,8 +1996,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ] = "",
     ) -> str:
-        """``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>`` —
-        branches the plugin has linked to an issue."""
+        """List Git branches linked to a Jira issue via the BigBrassBand plugin.
+
+        Useful when the dev panel misses a feature branch developers are
+        working on. Backed by
+        ``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>``.
+        """
         client = await _get_client(ctx)
         try:
             params: dict[str, Any] = {}
@@ -2000,9 +2026,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             Field(description="Full or shortened commit SHA as indexed by GIJ."),
         ],
     ) -> str:
-        """``GET /rest/gitplugin/1.0/commit/{sha}/issues`` — reverse
-        lookup: which Jira issues is this commit linked to. Useful
-        when a user asks "why is this commit showing on ticket X"."""
+        """Find which Jira issues a commit is linked to — reverse commit→issue lookup.
+
+        Answers "why is this commit showing up on ticket X" or "is this commit
+        linked anywhere". Backed by
+        ``GET /rest/gitplugin/1.0/commit/{sha}/issues``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -2031,14 +2060,14 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ],
     ) -> str:
-        """``GET /rest/dev-status/1.0/issue/summary?issueId=<id>`` — counts
-        per category (pullrequest / branch / repository) AND — critically —
-        the exact ``byInstanceType`` map whose keys are the valid
-        ``applicationType`` strings for ``get_issue_dev_detail``.
+        """Summary of the Git dev panel on an issue — counts of PRs/MRs, branches, commits, repositories.
 
-        Use this FIRST when you're not sure which provider (stash/GitHub/
-        githube/gitlab/bitbucket) is wired up; read the keys and pass them
-        verbatim to the detail call."""
+        Use this FIRST for any Git-panel question. The response also
+        contains ``byInstanceType`` keys that are the valid
+        ``applicationType`` strings for ``get_issue_dev_detail`` — drive
+        the follow-up loop from those keys instead of hard-coding provider
+        names. Backed by ``GET /rest/dev-status/1.0/issue/summary?issueId=<id>``.
+        """
         if not issue_id.isdigit():
             return _err(
                 "issue_id must be a numeric issue id. Resolve a key via "
@@ -2085,10 +2114,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ],
     ) -> str:
-        """``GET /rest/dev-status/1.0/issue/detail`` — raw dev-panel payload
-        the UI renders on the issue view. Structure:
+        """Get the full Git dev-panel detail for an issue — raw commits / branches / PRs.
+
+        The UI-equivalent payload the issue view renders. Structure:
         ``{detail:[{_instance, repositories[{commits[]}], branches[],
-        pullRequests[]}]}``."""
+        pullRequests[]}]}``. Backed by ``GET /rest/dev-status/1.0/issue/detail``.
+        """
         if not issue_id.isdigit():
             return _err("issue_id must be a numeric issue id.")
         if data_type not in ("repository", "branch", "pullrequest"):
@@ -2295,14 +2326,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "List SLA Definitions", "readOnlyHint": True},
     )
     async def list_sla_definitions(ctx: Context) -> str:
-        """``GET /rest/sla/1.0/slas`` — every SLA definition on the instance
-        (id, name, JQL scope, goals, calendar id). Admin-only in most
-        configurations.
+        """List all SLA definitions configured by the Time to SLA plugin.
 
-        If this 404s, the instance may be on an older Time to SLA version
-        where the list is exposed at ``/rest/sla/1.0/definitions``; try
-        that path manually via the upstream ``jira_development_rest`` tool
-        or open an Appfire support ticket for the exact leaf path.
+        Each definition: id, name, JQL scope, goals, calendar id. Admin-only
+        in most configurations. Backed by ``GET /rest/sla/1.0/slas`` with
+        automatic fallback to the older ``/rest/sla/1.0/definitions`` path
+        on 404.
         """
         client = await _get_client(ctx)
         try:
@@ -2327,11 +2356,10 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "List SLA Calendars", "readOnlyHint": True},
     )
     async def list_sla_calendars(ctx: Context) -> str:
-        """``GET /rest/sla/1.0/calendars`` — work schedules backing SLA
-        calculations (working days, hours, holidays).
+        """List work calendars used for SLA calculations — working days, hours, holidays.
 
-        Falls back to ``/rest/sla/1.0/slas/calendars`` if the first path
-        404s (older plugin layout).
+        Backed by ``GET /rest/sla/1.0/calendars`` with automatic fallback
+        to ``/rest/sla/1.0/slas/calendars`` on 404 (older plugin layout).
         """
         client = await _get_client(ctx)
         try:
@@ -2444,10 +2472,13 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             ),
         ] = "raw-seconds",
     ) -> str:
-        """``GET /rest/tis/report/1.0/api/issue`` — seconds spent in each
-        status (or assignee / group / custom-field bucket depending on
-        ``columns_by``). Any authenticated user with Browse permission on
-        the issue can call this."""
+        """Get time-in-status breakdown for one issue — how long it sat in each status.
+
+        Returns seconds per status (or per assignee / group / custom-field
+        bucket depending on ``columns_by``). Any authenticated user with
+        Browse permission can call. Backed by
+        ``GET /rest/tis/report/1.0/api/issue``.
+        """
         params: dict[str, Any] = {
             "issueKey": issue_key,
             "columnsBy": columns_by,
@@ -2508,15 +2539,18 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             str, Field(description="Optional work-calendar id.")
         ] = "",
     ) -> str:
-        """``GET /rest/tis/report/1.0/api/list2`` (cursor-paginated, ~20×
-        faster than the deprecated ``/api/list`` and still supported after
-        Atlassian's Aug 2025 JQL search API change).
+        """Run a bulk time-in-status report across a JQL — per-issue, average, or sum.
 
-        Output modes:
+        Answers "how long do tickets sit in Code Review on average" or
+        "team throughput by status this quarter". Three output modes:
+
         * ``list`` — per-issue seconds-in-each-status table
-        * ``average`` — average per status across the JQL set (how long does
-          a ticket typically sit in Code Review?)
-        * ``sum`` — total across the set (team-wide throughput signal)
+        * ``average`` — average per status across the JQL set
+        * ``sum`` — total across the set
+
+        Backed by ``GET /rest/tis/report/1.0/api/list2`` (cursor-paginated,
+        ~20× faster than the deprecated ``/api/list`` which stopped working
+        after Atlassian's Aug 2025 JQL search API change).
         """
         if not jql.strip():
             return _err("jql is required")
@@ -2549,10 +2583,12 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "List TIS Calendars", "readOnlyHint": True},
     )
     async def list_tis_calendars(ctx: Context) -> str:
-        """``GET /rest/tis/report/1.0/data/calendars`` — work calendars
-        configured for Time-in-Status reports (working days, hours,
-        holidays). IDs from this list are accepted by
-        ``get_issue_time_in_status`` / ``search_time_in_status``."""
+        """List work calendars configured for Time-in-Status reports.
+
+        Returns calendar ids + working days/hours/holidays. Accepted by
+        ``get_issue_time_in_status`` / ``search_time_in_status`` as the
+        ``calendar`` param. Backed by ``GET /rest/tis/report/1.0/data/calendars``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(client.rest_get("/rest/tis/report/1.0/data/calendars"))
@@ -2599,11 +2635,13 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             int, Field(description="Max records to return (1..1000).")
         ] = 100,
     ) -> str:
-        """``GET /rest/jeti/1.0/email/query`` — audit log of emails JETI has
-        sent. Answers "who got what email for this ticket and when".
+        """Find who received what email for a Jira issue and when.
 
-        Results are filtered by the plugin to what the caller has permission
-        to see (issue browse permission at minimum).
+        Audit log of emails sent by the Email This Issue (JETI) plugin.
+        Filters: issue key, recipient, template, date range, limit. Results
+        are filtered by the plugin to what the caller has permission to see
+        (issue browse at minimum). Backed by
+        ``GET /rest/jeti/1.0/email/query``.
         """
         params: dict[str, Any] = {"limit": max(1, min(int(limit), 1000))}
         if issue_key:
@@ -2636,9 +2674,11 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         from_date: Annotated[str, Field(description="ISO date.")] = "",
         to_date: Annotated[str, Field(description="ISO date.")] = "",
     ) -> str:
-        """``GET /rest/jeti/1.0/email/stat`` — count of audit-log entries
-        matching the filter. Cheap sanity check before a heavy
-        ``search_jeti_audit_log`` call."""
+        """Count JETI audit-log entries matching a filter — cheap sanity check.
+
+        Run this before a heavy ``search_jeti_audit_log`` if you only need
+        "how many emails went out". Backed by ``GET /rest/jeti/1.0/email/stat``.
+        """
         params: dict[str, Any] = {}
         if issue_key:
             params["issueKey"] = issue_key
@@ -2663,10 +2703,11 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "JETI Outgoing Mail Queue", "readOnlyHint": True},
     )
     async def get_jeti_outgoing_queue_stats(ctx: Context) -> str:
-        """``GET /rest/jeti/1.0/outgoingMailQueue/statistic`` — outbound
-        mail queue metrics (JETI v9.0.0+). Use this when users report
-        "emails aren't arriving" to see queue depth and processing lag
-        from the plugin's side."""
+        """Diagnose "JETI emails aren't arriving" — outbound mail queue stats.
+
+        Shows queue depth and processing lag. JETI v9.0.0+ only. Backed by
+        ``GET /rest/jeti/1.0/outgoingMailQueue/statistic``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -2687,9 +2728,11 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "JETI Incoming Mail Queue", "readOnlyHint": True},
     )
     async def get_jeti_incoming_queue_stats(ctx: Context) -> str:
-        """``GET /rest/jeti/1.0/incomingMailQueue/statistic`` — inbound mail
-        queue metrics (JETI v9.0.0+). Reveals whether mail handlers are
-        processing incoming mail or are stuck."""
+        """Diagnose inbound JETI mail handlers — are they processing or stuck.
+
+        Queue depth and lag for incoming mail. JETI v9.0.0+ only. Backed by
+        ``GET /rest/jeti/1.0/incomingMailQueue/statistic``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
@@ -2707,9 +2750,11 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
         annotations={"title": "JETI Mail Generation Queue", "readOnlyHint": True},
     )
     async def get_jeti_generation_queue_stats(ctx: Context) -> str:
-        """``GET /rest/jeti/1.0/mailGenerationQueue/statistic`` — mail
-        generation queue (template rendering pipeline) metrics. Spot
-        bottlenecks between event firing and email send."""
+        """Spot bottlenecks between JETI event firing and email send — template-rendering queue.
+
+        Diagnostic for "event fired but no email yet". JETI v9.0.0+ only.
+        Backed by ``GET /rest/jeti/1.0/mailGenerationQueue/statistic``.
+        """
         client = await _get_client(ctx)
         try:
             return _fmt(
