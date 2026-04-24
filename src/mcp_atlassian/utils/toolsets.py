@@ -200,6 +200,15 @@ JIRA_TOOLSETS: dict[str, ToolsetDefinition] = {
         ),
         default=False,
     ),
+    "jira_analyst_email": ToolsetDefinition(
+        name="jira_analyst_email",
+        description=(
+            "MetaInf Email This Issue (JETI) inspection: audit log of "
+            "sent emails (query by issue/recipient/date/template), "
+            "outgoing/incoming/generation mail-queue statistics"
+        ),
+        default=False,
+    ),
 }
 
 # --- Confluence toolsets (6) ---

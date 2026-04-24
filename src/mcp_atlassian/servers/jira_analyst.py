@@ -2560,3 +2560,164 @@ def register_analyst_tools(jira_mcp: Any) -> None:  # noqa: C901 — thin wrappe
             return _err(
                 f"list_tis_calendars failed: {exc}", status=exc.status
             )
+
+    # =====================================================================
+    # MetaInf "Email This Issue" (JETI, Marketplace 4977) — /rest/jeti/1.0/
+    #
+    # Vendor docs: https://docs.meta-inf.hu/email-this-issue/
+    # Public REST only covers the audit log and queue metrics; template /
+    # notification-rule / handler CRUD is exposed via OSGi API only and
+    # would require ScriptRunner. For analyst needs ("why did this issue
+    # get an email", "is the queue backing up") the REST surface is enough.
+    # =====================================================================
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_email"},
+        annotations={"title": "Search JETI Email Audit", "readOnlyHint": True},
+    )
+    async def search_jeti_audit_log(
+        ctx: Context,
+        issue_key: Annotated[
+            str,
+            Field(description="Filter by Jira issue key (e.g. 'HR-123')."),
+        ] = "",
+        recipient: Annotated[
+            str,
+            Field(description="Filter by recipient email address or username."),
+        ] = "",
+        template: Annotated[
+            str, Field(description="Filter by email-template name or id.")
+        ] = "",
+        from_date: Annotated[
+            str,
+            Field(description="ISO date ('2026-03-01') — audit records from this date."),
+        ] = "",
+        to_date: Annotated[
+            str, Field(description="ISO date — audit records up to this date.")
+        ] = "",
+        limit: Annotated[
+            int, Field(description="Max records to return (1..1000).")
+        ] = 100,
+    ) -> str:
+        """``GET /rest/jeti/1.0/email/query`` — audit log of emails JETI has
+        sent. Answers "who got what email for this ticket and when".
+
+        Results are filtered by the plugin to what the caller has permission
+        to see (issue browse permission at minimum).
+        """
+        params: dict[str, Any] = {"limit": max(1, min(int(limit), 1000))}
+        if issue_key:
+            params["issueKey"] = issue_key
+        if recipient:
+            params["recipient"] = recipient
+        if template:
+            params["template"] = template
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/jeti/1.0/email/query", **params))
+        except AnalystError as exc:
+            return _err(
+                f"search_jeti_audit_log failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_email"},
+        annotations={"title": "JETI Audit Count", "readOnlyHint": True},
+    )
+    async def get_jeti_audit_count(
+        ctx: Context,
+        issue_key: Annotated[str, Field(description="Optional issue key.")] = "",
+        recipient: Annotated[str, Field(description="Optional recipient.")] = "",
+        template: Annotated[str, Field(description="Optional template.")] = "",
+        from_date: Annotated[str, Field(description="ISO date.")] = "",
+        to_date: Annotated[str, Field(description="ISO date.")] = "",
+    ) -> str:
+        """``GET /rest/jeti/1.0/email/stat`` — count of audit-log entries
+        matching the filter. Cheap sanity check before a heavy
+        ``search_jeti_audit_log`` call."""
+        params: dict[str, Any] = {}
+        if issue_key:
+            params["issueKey"] = issue_key
+        if recipient:
+            params["recipient"] = recipient
+        if template:
+            params["template"] = template
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+        client = await _get_client(ctx)
+        try:
+            return _fmt(client.rest_get("/rest/jeti/1.0/email/stat", **params))
+        except AnalystError as exc:
+            return _err(
+                f"get_jeti_audit_count failed: {exc}", status=exc.status
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_email"},
+        annotations={"title": "JETI Outgoing Mail Queue", "readOnlyHint": True},
+    )
+    async def get_jeti_outgoing_queue_stats(ctx: Context) -> str:
+        """``GET /rest/jeti/1.0/outgoingMailQueue/statistic`` — outbound
+        mail queue metrics (JETI v9.0.0+). Use this when users report
+        "emails aren't arriving" to see queue depth and processing lag
+        from the plugin's side."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get("/rest/jeti/1.0/outgoingMailQueue/statistic")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_jeti_outgoing_queue_stats failed: {exc}",
+                status=exc.status,
+                hint=(
+                    "Requires JETI v9.0.0+. Older versions return 404 on "
+                    "queue endpoints."
+                ),
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_email"},
+        annotations={"title": "JETI Incoming Mail Queue", "readOnlyHint": True},
+    )
+    async def get_jeti_incoming_queue_stats(ctx: Context) -> str:
+        """``GET /rest/jeti/1.0/incomingMailQueue/statistic`` — inbound mail
+        queue metrics (JETI v9.0.0+). Reveals whether mail handlers are
+        processing incoming mail or are stuck."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get("/rest/jeti/1.0/incomingMailQueue/statistic")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_jeti_incoming_queue_stats failed: {exc}",
+                status=exc.status,
+                hint="Requires JETI v9.0.0+.",
+            )
+
+    @jira_mcp.tool(
+        tags={"jira", "read", "toolset:jira_analyst_email"},
+        annotations={"title": "JETI Mail Generation Queue", "readOnlyHint": True},
+    )
+    async def get_jeti_generation_queue_stats(ctx: Context) -> str:
+        """``GET /rest/jeti/1.0/mailGenerationQueue/statistic`` — mail
+        generation queue (template rendering pipeline) metrics. Spot
+        bottlenecks between event firing and email send."""
+        client = await _get_client(ctx)
+        try:
+            return _fmt(
+                client.rest_get("/rest/jeti/1.0/mailGenerationQueue/statistic")
+            )
+        except AnalystError as exc:
+            return _err(
+                f"get_jeti_generation_queue_stats failed: {exc}",
+                status=exc.status,
+                hint="Requires JETI v9.0.0+.",
+            )

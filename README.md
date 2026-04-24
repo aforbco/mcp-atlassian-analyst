@@ -99,7 +99,7 @@ Documentation is also available in [llms.txt format](https://llmstxt.org/), whic
 
 ## Jira DC Analyst toolset (this fork)
 
-This fork adds **113 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see.
+This fork adds **118 read-only deep-inspection tools** for Jira Data Center admins, ported from [jira-analyst-mcp](https://github.com/aforbco/jira-analyst-mcp). They cover configuration areas the stock REST API cannot see.
 
 **Full tool-by-tool list with descriptions → [TOOLS.md](TOOLS.md).**
 
@@ -119,6 +119,7 @@ This fork adds **113 read-only deep-inspection tools** for Jira Data Center admi
 | `jira_analyst_properties` | 6 | Entity-properties inspection — the generic JSON-blob storage used by Jira and many plugins (JXL sheets, Automation, scripting state) on projects, issues, and users. Read-only list + get for all three scopes |
 | `jira_analyst_sla` | 3 | Appfire/SaaSJet **Time to SLA** plugin: `list_sla_definitions`, `list_sla_calendars`, `search_sla_status` (per-issue elapsed/remaining/breached across a JQL) |
 | `jira_analyst_time_in_status` | 3 | OBSS **Timepiece — Time in Status** plugin: `get_issue_time_in_status`, `search_time_in_status` (list/average/sum modes via `/api/list2`), `list_tis_calendars` |
+| `jira_analyst_email` | 5 | MetaInf **Email This Issue** (JETI) via `/rest/jeti/1.0/`: `search_jeti_audit_log` (who got what email when), `get_jeti_audit_count`, plus outgoing/incoming/generation mail-queue stats (v9.0.0+) |
 
 ### Enabling it
 

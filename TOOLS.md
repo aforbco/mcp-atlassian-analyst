@@ -1,11 +1,11 @@
 # Tools reference — mcp-atlassian-analyst
 
-113 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
+118 read-only deep-inspection tools for Jira Data Center admins, on top of 51 inherited upstream tools.
 
-Auto-generated from tool registrations on `feat/jira-analyst-toolset-v4`.
+Auto-generated from tool registrations on `feat/jira-analyst-toolset-v5`.
 Source: [`src/mcp_atlassian/servers/jira_analyst.py`](src/mcp_atlassian/servers/jira_analyst.py).
 
-**162 tools total across 28 toolsets.**
+**167 tools total across 29 toolsets.**
 
 Tool names below include the `jira_` / `confluence_` prefix that FastMCP mounts automatically.
 
@@ -15,7 +15,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 
 ## Fork-specific toolsets
 
-### `jira_analyst_admin` — Jira DC admin configuration (SR-backed + REST) (45)
+### `jira_analyst_admin` — Jira DC admin configuration (45)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -131,7 +131,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_get_audit_log` | read | Admin audit events — permission changes, scheme edits, user management. |
 | `jira_get_system_log` | read | Tail of atlassian-jira.log for debugging plugin errors and startup issues. |
 
-### `jira_analyst_integrations` — Integration surface (plugins, webhooks, applinks) (6)
+### `jira_analyst_integrations` — Plugins, webhooks, applinks (6)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -151,7 +151,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_get_issue_remotelinks` | read | External links attached to an issue — ``/rest/api/2/issue/{key}/remotelink``. |
 | `jira_get_issue_votes` | read | Total votes and (where visible) voter list for an issue. |
 
-### `jira_analyst_dvcs` — DVCS + Git Integration + dev-status (10)
+### `jira_analyst_dvcs` — DVCS + Git + dev-status (10)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -166,7 +166,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_gij_issue_branches` | read | ``GET /rest/gitplugin/1.0/issues/branches?key=<issueKey>`` — |
 | `jira_list_gij_issue_commits` | read | ``GET /rest/gitplugin/1.0/issues/{key}/commits`` — commits |
 
-### `jira_analyst_properties` — Entity properties (projects/issues/users) (6)
+### `jira_analyst_properties` — Entity properties (6)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -177,7 +177,7 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_project_properties` | read | Keys of all entity properties on a project — the first step when |
 | `jira_list_user_properties` | read | Keys of all per-user properties. Some plugins store personal |
 
-### `jira_analyst_sla` — Appfire/SaaSJet Time to SLA (3)
+### `jira_analyst_sla` — Appfire Time to SLA (3)
 
 | Tool | Kind | Description |
 |---|---|---|
@@ -185,13 +185,23 @@ Kind legend: **read** = read-only · **write** = state-changing (disabled under 
 | `jira_list_sla_definitions` | read | ``GET /rest/sla/1.0/slas`` — every SLA definition on the instance |
 | `jira_search_sla_status` | read | Per-issue SLA status across a JQL result set. |
 
-### `jira_analyst_time_in_status` — OBSS Timepiece — Time in Status (3)
+### `jira_analyst_time_in_status` — OBSS Timepiece (Time in Status) (3)
 
 | Tool | Kind | Description |
 |---|---|---|
 | `jira_get_issue_time_in_status` | read | ``GET /rest/tis/report/1.0/api/issue`` — seconds spent in each |
 | `jira_list_tis_calendars` | read | ``GET /rest/tis/report/1.0/data/calendars`` — work calendars |
 | `jira_search_time_in_status` | read | ``GET /rest/tis/report/1.0/api/list2`` (cursor-paginated, ~20× |
+
+### `jira_analyst_email` — MetaInf Email This Issue (JETI) (5)
+
+| Tool | Kind | Description |
+|---|---|---|
+| `jira_get_jeti_audit_count` | read | ``GET /rest/jeti/1.0/email/stat`` — count of audit-log entries |
+| `jira_get_jeti_generation_queue_stats` | read | ``GET /rest/jeti/1.0/mailGenerationQueue/statistic`` — mail |
+| `jira_get_jeti_incoming_queue_stats` | read | ``GET /rest/jeti/1.0/incomingMailQueue/statistic`` — inbound mail |
+| `jira_get_jeti_outgoing_queue_stats` | read | ``GET /rest/jeti/1.0/outgoingMailQueue/statistic`` — outbound |
+| `jira_search_jeti_audit_log` | read | ``GET /rest/jeti/1.0/email/query`` — audit log of emails JETI has |
 
 ---
 
